@@ -58,7 +58,7 @@ export default async function RootLayout(props: {
 
   return (
     <html lang={locale} className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <body className="font-sans" suppressHydrationWarning>
         <ThemeInitializer />
         <NextIntlClientProvider>{props.children}</NextIntlClientProvider>
       </body>
