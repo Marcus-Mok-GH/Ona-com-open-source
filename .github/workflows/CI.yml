@@ -74,7 +74,9 @@ jobs:
 
       - name: Smoke test — server boots, health endpoint and auth flow respond
         run: |
-          npm run start &
+          # Start the server directly (not via npm) so SERVER_PID is the real
+          # server process and the later kill in this step works reliably.
+          npx next start -p 5000 &
           SERVER_PID=$!
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/healthz || true)
@@ -118,7 +120,11 @@ jobs:
             echo "Neon Auth not configured - skipping auth flow check"
             exit 0
           fi
-          npm run start &
+          # A previous step's server may still hold port 5000 (npm kills the
+          # wrapper, not the node child) - clear it before binding.
+          pkill -f 'next-server' 2>/dev/null || true
+          sleep 2
+          npx next start -p 5000 &
           SERVER_PID=$!
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/auth/ok || true)
