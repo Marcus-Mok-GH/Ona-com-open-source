@@ -76,10 +76,22 @@ COOKIE_SECRET="$(get_env NEON_AUTH_COOKIE_SECRET)"
 [ -n "$AUTH_BASE_URL" ] || fail "NEON_AUTH_BASE_URL missing in $ENV_FILE"
 [ -n "$COOKIE_SECRET" ] || fail "NEON_AUTH_COOKIE_SECRET missing in $ENV_FILE"
 
+# ── 3b. Super-agent heartbeat secret ────────────────────────────────────────
+# Rotated value (the original was committed to git history and is burned).
+# Reuse the local value if present so CI and production stay consistent;
+# otherwise generate one and persist it locally.
+HEARTBEAT_SECRET="$(grep -E '^SUPER_AGENT_HEARTBEAT_SECRET=' "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)"
+if [ -z "$HEARTBEAT_SECRET" ]; then
+  HEARTBEAT_SECRET="$(openssl rand -hex 32)"
+  printf 'SUPER_AGENT_HEARTBEAT_SECRET=%s\n' "$HEARTBEAT_SECRET" >> "$ENV_FILE"
+  log "Generated SUPER_AGENT_HEARTBEAT_SECRET and appended to $ENV_FILE"
+fi
+
 push_env POSTGRES_URL "$POSTGRES_URL"
 push_env POSTGRES_URL_NON_POOLING "$NON_POOLING"
 push_env NEON_AUTH_BASE_URL "$AUTH_BASE_URL"
 push_env NEON_AUTH_COOKIE_SECRET "$COOKIE_SECRET"
+push_env SUPER_AGENT_HEARTBEAT_SECRET "$HEARTBEAT_SECRET"
 
 # ── 4. Optional production deployment ────────────────────────────────────────
 if [ "${VERCEL_DEPLOY:-0}" = "1" ] || [ "${1:-}" = "--deploy" ]; then

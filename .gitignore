@@ -80,3 +80,5 @@ build-archive.log
 # clerk configuration (can include secrets)
 /.clerk/
 .aider*
+.vercel
+.env*
