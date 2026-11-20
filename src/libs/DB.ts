@@ -110,21 +110,17 @@ const createDbConnection = async (): Promise<NodePgDatabase<typeof schema>> => {
   return db;
 };
 
-// Only initialize once and store in global during development to prevent hot reload issues
+// Only initialize once and store in global to prevent duplicate connections and to make
+// the synchronous `db` export usable in every runtime (dev, build, production).
 let dbPromise: Promise<NodePgDatabase<typeof schema>> | undefined;
 
-if (process.env.NODE_ENV === 'production') {
-  dbPromise = createDbConnection();
+if (!globalForDb.drizzle) {
+  dbPromise = createDbConnection().then((db) => {
+    globalForDb.drizzle = db;
+    return db;
+  });
 } else {
-  if (!globalForDb.drizzle) {
-    globalForDb.drizzle = undefined;
-    dbPromise = createDbConnection().then(db => {
-      globalForDb.drizzle = db;
-      return db;
-    });
-  } else {
-    dbPromise = Promise.resolve(globalForDb.drizzle);
-  }
+  dbPromise = Promise.resolve(globalForDb.drizzle);
 }
 
 // Export a function to get the database instance
