@@ -14,7 +14,7 @@ vi.mock('@/libs/Daytona', () => ({
 }));
 
 const getSessionMock = vi.hoisted(() => vi.fn(async () => ({})));
-vi.mock('@/libs/ReplitAuth', () => ({
+vi.mock('@/libs/NeonAuth', () => ({
   getSession: getSessionMock,
 }));
 

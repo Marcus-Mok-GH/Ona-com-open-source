@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
 import { createApiKeySecret, getApiKeyPrefix, hashApiKey, normalizeApiKeyScope } from '@/libs/ApiKeys';
 import { db } from '@/libs/DB';
-import { getSession } from '@/libs/ReplitAuth';
+import { getSession } from '@/libs/NeonAuth';
 import { apiKeysSchema } from '@/models/Schema';
 
 export async function GET() {

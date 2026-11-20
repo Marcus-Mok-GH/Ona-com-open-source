@@ -57,5 +57,15 @@ export function signIn(returnTo?: string) {
 }
 
 export function signOut() {
-  navigateTopLevel('/api/logout');
+  const locale = getLocaleFromPath(window.location.pathname);
+  const homePath = locale === AppConfig.defaultLocale ? '/' : `/${locale}`;
+  fetch('/api/auth/sign-out', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  })
+    .catch(() => undefined)
+    .finally(() => {
+      navigateTopLevel(homePath);
+    });
 }
