@@ -55,7 +55,8 @@ jobs:
         if: env.NEON_API_KEY != ''
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-        run: bash scripts/neon-setup.sh
+        run: |
+          ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
 
       - name: Provision Neon database and auth (optional)
         env:
@@ -69,7 +70,7 @@ jobs:
               echo "NEON_AUTH_COOKIE_SECRET=ci-smoke-test-secret-value-32-chars-min-0"
             } > .env.local
           else
-            bash scripts/neon-setup.sh
+            ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
           fi
 
       - name: Smoke test — server boots, health endpoint and auth flow respond

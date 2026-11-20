@@ -30,7 +30,7 @@
 set -euo pipefail
 
 PROJECT_NAME="${ONA_NEON_PROJECT_NAME:-ona-com-open-source}"
-BRANCH_NAME="ona"
+BRANCH_NAME="${ONA_NEON_BRANCH:-ona}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ONA_ENV_FILE:-$ROOT_DIR/.env.local}"
 
