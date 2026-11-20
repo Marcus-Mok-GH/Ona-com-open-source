@@ -48,7 +48,31 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
-      - name: Smoke test — server boots and health endpoint responds
+      # Preferred: provision a real Neon project/branch (DB + Managed Neon Auth)
+      # with the Neon CLI driven by NEON_API_KEY. Falls back to the local
+      # Postgres service + Replit-free dummy auth env when no key is configured.
+      - name: Provision Neon database and auth (NEON_API_KEY)
+        if: env.NEON_API_KEY != ''
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: bash scripts/neon-setup.sh
+
+      - name: Provision Neon database and auth (optional)
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          if [ -z "$NEON_API_KEY" ]; then
+            echo "NEON_API_KEY not set - falling back to the local Postgres service container"
+            {
+              echo "POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/ona"
+              echo "SESSION_SECRET=ci-smoke-test-secret-value-32-chars-min"
+              echo "NEON_AUTH_COOKIE_SECRET=ci-smoke-test-secret-value-32-chars-min-0"
+            } > .env.local
+          else
+            bash scripts/neon-setup.sh
+          fi
+
+      - name: Smoke test — server boots, health endpoint and auth flow respond
         run: |
           npm run start &
           SERVER_PID=$!
@@ -57,15 +81,62 @@ jobs:
             if [ "$code" = "200" ]; then
               echo "healthz returned 200 after ~$((i * 2))s"
               curl -sf http://localhost:5000/api/healthz
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "::error::/api/healthz did not return 200 within 60s"
               kill $SERVER_PID 2>/dev/null || true
-              exit 0
+              exit 1
             fi
             sleep 2
           done
-          echo "::error::/api/healthz did not return 200 within 60s"
+
+          # Auth flow smoke test (Neon Auth via /api/auth proxy)
+          ORIGIN=http://localhost:5000
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
+            -X POST "$ORIGIN/api/auth/sign-up/email" \
+            -d "{\"email\":\"ci-$GITHUB_RUN_ID@ona-smoke.test\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Neon Auth sign-up returned HTTP $CODE"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+          echo "Neon Auth sign-up returned 200"
           kill $SERVER_PID 2>/dev/null || true
-          exit 1
+          exit 0
         env:
+          FIREWORKS_API_KEY: dummy-key-for-ci
+          # Used only when the Neon provisioning step did not run (no NEON_API_KEY secret)
           POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ona
           SESSION_SECRET: ci-smoke-test-secret-value-32-chars-min
+          NEON_AUTH_COOKIE_SECRET: ci-smoke-test-secret-value-32-chars-min
+      - name: Smoke test - auth flow against Neon (optional)
+        if: ${{ hashFiles('.env.local') != '' }}
+        run: |
+          if ! grep -q '^NEON_AUTH_BASE_URL=' .env.local; then
+            echo "Neon Auth not configured - skipping auth flow check"
+            exit 0
+          fi
+          npm run start &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/auth/ok || true)
+            if [ "$code" = "200" ]; then break; fi
+            sleep 2
+          done
+          [ "$code" = "200" ] || { echo "::error::auth handler did not start"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          rm -f cookies.txt
+          signup=$(curl -s -c cookies.txt -X POST http://localhost:5000/api/auth/sign-up/email \
+            -H 'Content-Type: application/json' -H 'Origin: http://localhost:5000' \
+            -d '{"email":"ci-smoke@ona.dev","password":"supersecret123","name":"CI Smoke"}')
+          echo "$signup" | head -c 200
+          echo "$signup" | grep -q '"user"' || { echo "::error::Neon Auth sign-up failed"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          user=$(curl -s -b cookies.txt http://localhost:5000/api/auth/user)
+          echo "session user: $user"
+          echo "$user" | grep -q 'ci-smoke@ona.dev' || { echo "::error::session cookie did not resolve a user"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          echo "Auth flow OK"
+          kill $SERVER_PID 2>/dev/null || true
+        env:
           FIREWORKS_API_KEY: dummy-key-for-ci
+
