@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getUser } from '@/libs/auth';
 import { getDb } from '@/libs/DB';
 import { conversationsSchema, userCreditsSchema, apiKeysSchema } from '@/models/Schema';
+import { AppConfig } from '@/utils/AppConfig';
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -47,7 +48,9 @@ export default async function Dashboard(props: Props) {
 
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in?returnTo=/dashboard');
+    const dashboardPath = locale === AppConfig.defaultLocale ? '/dashboard' : `/${locale}/dashboard`;
+    const signInPath = locale === AppConfig.defaultLocale ? '/sign-in' : `/${locale}/sign-in`;
+    redirect(`${signInPath}?returnTo=${encodeURIComponent(dashboardPath)}`);
   }
 
   const db = await getDb();

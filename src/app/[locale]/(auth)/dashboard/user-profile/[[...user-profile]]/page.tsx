@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getUser } from '@/libs/auth';
+import { AppConfig } from '@/utils/AppConfig';
 import { ApiKeysPanel, CreditsTopup, DarkModeToggle, SignOutButton } from './SettingsActions';
 
 function getInitials(firstName: string | null, lastName: string | null, email: string | null): string {
@@ -15,11 +16,16 @@ function getDisplayName(firstName: string | null, lastName: string | null, email
   return full || email || 'Account';
 }
 
-export default async function UserProfilePage() {
+type Props = { params: Promise<{ locale: string }> };
+
+export default async function UserProfilePage(props: Props) {
+  const { locale } = await props.params;
   const user = await getUser();
 
   if (!user) {
-    redirect('/sign-in?returnTo=/dashboard/user-profile');
+    const settingsPath = locale === AppConfig.defaultLocale ? '/dashboard/user-profile' : `/${locale}/dashboard/user-profile`;
+    const signInPath = locale === AppConfig.defaultLocale ? '/sign-in' : `/${locale}/sign-in`;
+    redirect(`${signInPath}?returnTo=${encodeURIComponent(settingsPath)}`);
   }
 
   const initials = getInitials(user.firstName, user.lastName, user.email);
