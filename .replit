@@ -47,7 +47,11 @@ externalPort = 3001
 [userenv]
 
 [userenv.shared]
-SUPER_AGENT_HEARTBEAT_SECRET = "a15bc3a230d7199204285ca2a4138dafb95d785364f079d3ac3dcd497fdb30ed"
+# Secrets must NOT live in this file (it is committed to git).
+# Set SUPER_AGENT_HEARTBEAT_SECRET (and other secrets) in Replit:
+#   Workspace -> Tools -> Secrets. The previously committed value has been
+#   exposed and should be rotated.
+SUPER_AGENT_HEARTBEAT_SECRET = "SET-VIA-REPLIT-SECRETS"
 
 [userenv.development]
 
