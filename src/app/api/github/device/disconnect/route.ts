@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import { db } from '@/libs/DB';
-import { getSession } from '@/libs/ReplitAuth';
+import { getSession } from '@/libs/NeonAuth';
 import { userGithubTokensSchema } from '@/models/Schema';
 
 export const dynamic = 'force-dynamic';
