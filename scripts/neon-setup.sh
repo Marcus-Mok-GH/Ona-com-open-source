@@ -124,6 +124,12 @@ add_domain() {
 }
 add_domain "${ONA_NEON_APP_DOMAIN:-}"
 add_domain "http://localhost:5000"
+# Deployment origins (override with ONA_NEON_DOMAINS, space-separated).
+if [ -n "${ONA_NEON_DOMAINS:-}" ]; then
+  for d in $ONA_NEON_DOMAINS; do add_domain "$d"; done
+else
+  add_domain "https://ona-com-open-source.vercel.app"
+fi
 add_domain "http://localhost:3000"
 
 # ── 4. Connection strings ────────────────────────────────────────────────────

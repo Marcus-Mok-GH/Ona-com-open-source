@@ -156,6 +156,14 @@ jobs:
         env:
           FIREWORKS_API_KEY: dummy-key-for-ci
 
+      - name: Vercel — sync Neon auth and database env via CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: bash scripts/vercel-setup.sh
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Cleanup throwaway Neon CI branches (optional)
         if: ${{ always() && env.NEON_API_KEY != '' }}
         run: |
