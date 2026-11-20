@@ -156,3 +156,11 @@ jobs:
         env:
           FIREWORKS_API_KEY: dummy-key-for-ci
 
+      - name: Cleanup throwaway Neon CI branches (optional)
+        if: ${{ always() && env.NEON_API_KEY != '' }}
+        run: |
+          ids=$(npx -y neon@latest branches list -o json 2>/dev/null \
+            | jq -r '(if type=="array" then . else .branches end)[] | select(.name | startswith("ona-ci-")) | .id')
+          for id in $ids; do
+            npx -y neon@latest branches delete "$id" -y >/dev/null 2>&1 && echo "deleted branch $id" || true
+          done
