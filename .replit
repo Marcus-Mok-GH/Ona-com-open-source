@@ -1,7 +1,9 @@
 modules = ["web", "bash", "nodejs-22"]
 [agent]
 expertMode = true
-integrations = ["javascript_log_in_with_replit:2.0.0"]
+# Auth and database are provided by Neon (Managed Better Auth + Postgres).
+# Provision with: NEON_API_KEY=... bash scripts/neon-setup.sh
+integrations = []
 
 [nix]
 channel = "stable-25_05"
