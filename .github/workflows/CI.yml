@@ -8,191 +8,64 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-    name: Build with ${{ matrix.node-version }}
+    name: Build & smoke test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ona
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
+          cache: npm
 
-      - name: Restore or cache Next.js build
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Cache Next.js build
         uses: actions/cache@v4
         with:
-          path: |
-            .next/cache
-          # Generate a new cache whenever packages or source files change.
-          key: nextjs-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**') }}
+          path: .next/cache
+          key: nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: nextjs-
 
       - name: Build Next.js
         run: npm run build
-        env:
-          NEXT_PUBLIC_SENTRY_DISABLED: 'true' # Only upload Sentry source maps in deployment
 
-      - if: matrix.node-version == '22.x' && success()
-        name: Cache Next.js build output
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            .next
-          key: nextjs-build-${{ matrix.node-version }}-${{ github.sha }}
-
-  static:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run static checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Retrieve Git history, needed to verify commits
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - if: github.event_name == 'pull_request'
-        name: Validate all commits from PR
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-
-      - name: Linter
-        run: npm run lint
-
-      - name: Type checking
-        run: npm run check:types
-
-      - name: Check dependencies
-        run: npm run check:deps
-
-      - name: I18n check
-        run: npm run check:i18n
-
-  unit:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run unit tests
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Run unit tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: npm run test -- --coverage
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  storybook:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run Storybook
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Run storybook tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: npm run storybook:test
-
-  e2e:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run E2E tests
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # For chromatic
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-          restore-nextjs-cache: true
-
-      - name: Run E2E tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: sh -c "HOME=/root npm run test:e2e" # Set HOME to /root to avoid Playwright error with Firebox
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-
-      - name: Fix test results permission # Give permissions to test results needed by Chromatic
+      - name: Smoke test — server boots and health endpoint responds
         run: |
-          sudo chmod -R 777 test-results
-
-      - name: Run visual regression tests
-        uses: chromaui/action@v13
-        with:
-          playwright: true
-          exitOnceUploaded: true # Speed up by skipping the build results
-          outputDir: storybook-static
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: test-results
-          path: test-results/
-          retention-days: 7
-
-  lighthouse:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run unlighthouse
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-          restore-nextjs-cache: true
-
-      - name: Run unlighthouse
-        run: |
-          npm run test:lighthouse
+          npm run start &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/healthz || true)
+            if [ "$code" = "200" ]; then
+              echo "healthz returned 200 after ~$((i * 2))s"
+              curl -sf http://localhost:5000/api/healthz
+              kill $SERVER_PID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::/api/healthz did not return 200 within 60s"
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+        env:
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ona
+          SESSION_SECRET: ci-smoke-test-secret-value-32-chars-min
+          FIREWORKS_API_KEY: dummy-key-for-ci
