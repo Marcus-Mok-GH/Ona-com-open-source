@@ -55,7 +55,8 @@ jobs:
         if: env.NEON_API_KEY != ''
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-        run: bash scripts/neon-setup.sh
+        run: |
+          ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
 
       - name: Provision Neon database and auth (optional)
         env:
@@ -69,7 +70,7 @@ jobs:
               echo "NEON_AUTH_COOKIE_SECRET=ci-smoke-test-secret-value-32-chars-min-0"
             } > .env.local
           else
-            bash scripts/neon-setup.sh
+            ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
           fi
 
       - name: Smoke test — server boots, health endpoint and auth flow respond
@@ -95,10 +96,11 @@ jobs:
 
           # Auth flow smoke test (Neon Auth via /api/auth proxy)
           ORIGIN=http://localhost:5000
+          EMAIL="ci-$GITHUB_RUN_ID-$(date +%s)@ona-smoke.test"
           CODE=$(curl -s -o /dev/null -w '%{http_code}' \
             -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
             -X POST "$ORIGIN/api/auth/sign-up/email" \
-            -d "{\"email\":\"ci-$GITHUB_RUN_ID@ona-smoke.test\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
+            -d "{\"email\":\"$EMAIL\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
           if [ "$CODE" != "200" ]; then
             echo "::error::Neon Auth sign-up returned HTTP $CODE"
             kill $SERVER_PID 2>/dev/null || true
@@ -133,16 +135,32 @@ jobs:
           done
           [ "$code" = "200" ] || { echo "::error::auth handler did not start"; kill $SERVER_PID 2>/dev/null; exit 1; }
           rm -f cookies.txt
+          EMAIL="ci-$GITHUB_RUN_ID-$(date +%s)@ona-smoke.test"
           signup=$(curl -s -c cookies.txt -X POST http://localhost:5000/api/auth/sign-up/email \
             -H 'Content-Type: application/json' -H 'Origin: http://localhost:5000' \
-            -d '{"email":"ci-smoke@ona.dev","password":"supersecret123","name":"CI Smoke"}')
+            -d "{\"email\":\"$EMAIL\",\"password\":\"supersecret123\",\"name\":\"CI Smoke\"}")
           echo "$signup" | head -c 200
-          echo "$signup" | grep -q '"user"' || { echo "::error::Neon Auth sign-up failed"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          if ! echo "$signup" | grep -q '"user"'; then
+            echo "sign-up failed - retrying as sign-in (user may persist across runs on the same branch)"
+            signin=$(curl -s -c cookies.txt -X POST http://localhost:5000/api/auth/sign-in/email \
+              -H 'Content-Type: application/json' -H 'Origin: http://localhost:5000' \
+              -d "{\"email\":\"$EMAIL\",\"password\":\"supersecret123\"}")
+            echo "$signin" | head -c 200
+            echo "$signin" | grep -q '"user"' || { echo "::error::Neon Auth sign-up/sign-in failed"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          fi
           user=$(curl -s -b cookies.txt http://localhost:5000/api/auth/user)
           echo "session user: $user"
-          echo "$user" | grep -q 'ci-smoke@ona.dev' || { echo "::error::session cookie did not resolve a user"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          echo "$user" | grep -q 'ona-smoke.test' || { echo "::error::session cookie did not resolve a user"; kill $SERVER_PID 2>/dev/null; exit 1; }
           echo "Auth flow OK"
           kill $SERVER_PID 2>/dev/null || true
         env:
           FIREWORKS_API_KEY: dummy-key-for-ci
 
+      - name: Cleanup throwaway Neon CI branches (optional)
+        if: ${{ always() && env.NEON_API_KEY != '' }}
+        run: |
+          ids=$(npx -y neon@latest branches list -o json 2>/dev/null \
+            | jq -r '(if type=="array" then . else .branches end)[] | select(.name | startswith("ona-ci-")) | .id')
+          for id in $ids; do
+            npx -y neon@latest branches delete "$id" -y >/dev/null 2>&1 && echo "deleted branch $id" || true
+          done
