@@ -1,3 +1,4 @@
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
 const OVERSEER_MODEL = process.env.POLLINATIONS_OVERSEER_MODEL ?? 'minimax/minimax-m3.1-flash';
 const OVERSEER_MAX_ITERATIONS = 8;
 
@@ -138,15 +139,12 @@ async function runInternalTool(name: string, args: Record<string, unknown>): Pro
 }
 
 async function overseerCall(messages: OverseerMessage[]): Promise<{ content: string; toolCalls: OverseerToolCall[] }> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured.');
-  }
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: OVERSEER_MODEL,

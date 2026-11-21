@@ -19,7 +19,7 @@
  */
 
 import { chromium } from 'playwright';
-import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import type { Browser, Page } from 'playwright';
 
 const LIBRARIAN_PRO_MODEL =
@@ -827,13 +827,12 @@ type PollinationsNonStreamResponse = {
 async function librarianProCall(
   messages: LibrarianProMessage[],
 ): Promise<{ content: string; reasoning: string; toolCalls: LibrarianProToolCall[] }> {
-  if (!process.env.POLLINATIONS_API_KEY) throw new Error('POLLINATIONS_API_KEY is not configured.');
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: LIBRARIAN_PRO_MODEL,

@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { POLLINATIONS_API_URL } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
@@ -786,10 +786,6 @@ function normalizeMessages(messages: ApiMessage[]) {
 }
 
 async function callPollinations(body: Record<string, unknown>, modelOverride?: string): Promise<Response> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured. Please add it in environment secrets.');
-  }
-
   // When a specific model is requested, try it first, then fall back to the
   // standard fallback list if it is unavailable on the Pollinations catalog.
   const modelsToTry = modelOverride
@@ -804,7 +800,7 @@ async function callPollinations(body: Record<string, unknown>, modelOverride?: s
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+          ...pollinationsAuthHeaders(),
         },
         body: JSON.stringify({ model, ...body }),
         signal: AbortSignal.timeout(120000),

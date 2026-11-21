@@ -21,7 +21,7 @@
  */
 
 import { chromium } from 'playwright';
-import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import type { Browser, Page } from 'playwright';
 
 const BROWSER_USE_MODEL =
@@ -660,13 +660,12 @@ type PollinationsNonStreamResponse = {
 async function browserUseCall(
   messages: BrowserUseMessage[],
 ): Promise<{ content: string; toolCalls: BrowserUseToolCall[] }> {
-  if (!process.env.POLLINATIONS_API_KEY) throw new Error('POLLINATIONS_API_KEY is not configured.');
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: BROWSER_USE_MODEL,

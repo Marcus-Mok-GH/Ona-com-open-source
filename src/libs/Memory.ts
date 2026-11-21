@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
-import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import { getDb } from '@/libs/DB';
 import { logger as baseLogger } from '@/libs/Logger';
 import { codebaseMemorySchema } from '@/models/Schema';

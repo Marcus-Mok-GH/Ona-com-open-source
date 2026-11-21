@@ -1,3 +1,4 @@
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
 const ORACLE_MODEL = process.env.POLLINATIONS_ORACLE_MODEL ?? 'minimax/minimax-m3.1-flash';
 const ORACLE_MAX_REFINEMENT_PASSES = Math.max(1, Math.min(Number(process.env.ORACLE_MAX_REFINEMENT_PASSES ?? '4'), 8));
 
@@ -39,15 +40,12 @@ type PollinationsNonStreamResponse = {
 };
 
 async function oracleCall(messages: OracleMessage[], maxTokens = 32768): Promise<{ content: string; reasoning: string }> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured.');
-  }
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: ORACLE_MODEL,

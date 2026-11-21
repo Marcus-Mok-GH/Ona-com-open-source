@@ -1,5 +1,5 @@
 import { githubToolDefinitions, runGitHubTool } from '@/libs/GitHub';
-import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import { daytonaToolDefinitions, isDaytonaTool, prebootSandbox, runDaytonaTool } from '@/libs/Daytona';
 import { callLibrarianProToolDefinition, isCallLibrarianProTool, runLibrarianProSubagent } from '@/libs/LibrarianPro';
 import { callOracleToolDefinition, isCallOracleTool, runOracleSubagent } from '@/libs/Oracle';
@@ -132,15 +132,12 @@ async function callFleetPollinations(
   toolCalls: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
   finishReason: string | null;
 }> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured.');
-  }
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: FLEET_MODEL,

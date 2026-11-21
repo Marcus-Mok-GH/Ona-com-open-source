@@ -1,3 +1,4 @@
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
 /**
  * Librarian subagent — invoked exclusively by the main ONA but OPEN SOURCE AI via `call_librarian`.
  *
@@ -460,15 +461,12 @@ type PollinationsNonStreamResponse = {
 // ── Librarian agentic loop ───────────────────────────────────────────────────
 
 async function librarianCall(messages: LibrarianMessage[]): Promise<{ content: string; toolCalls: LibrarianToolCall[] }> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured.');
-  }
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: LIBRARIAN_MODEL,

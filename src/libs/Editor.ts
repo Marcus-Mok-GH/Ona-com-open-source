@@ -14,7 +14,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import { resolve, dirname } from 'path';
 import { createFileDiff } from './FileDiff';
 import type { TouchedFileDiff } from './FileDiff';
@@ -204,15 +204,12 @@ type PollinationsNonStreamResponse = {
 };
 
 async function editorCall(messages: EditorMessage[]): Promise<{ content: string; toolCalls: EditorToolCall[] }> {
-  if (!process.env.POLLINATIONS_API_KEY) {
-    throw new Error('POLLINATIONS_API_KEY is not configured.');
-  }
 
   const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: EDITOR_MODEL,

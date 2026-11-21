@@ -17,12 +17,17 @@ export const POLLINATIONS_FALLBACK_MODELS = [
   'minimax/minimax-m2.7',
 ];
 
-export function requirePollinationsApiKey(): string {
+/**
+ * Anonymous-tier friendly auth headers. Pollinations works without a key
+ * (rate-limited anonymous tier); set POLLINATIONS_API_KEY for higher limits.
+ */
+export function pollinationsAuthHeaders(): Record<string, string> {
   const apiKey = process.env.POLLINATIONS_API_KEY;
   if (!apiKey) {
-    throw new Error('POLLINATIONS_API_KEY is not configured. Please add it in environment secrets.');
+    logger.warn('POLLINATIONS_API_KEY not set — using the anonymous Pollinations tier.');
+    return {};
   }
-  return apiKey;
+  return { Authorization: `Bearer ${apiKey}` };
 }
 
 /** Shared model fallback resolution for Pollinations calls. */
@@ -51,7 +56,7 @@ export async function pollinationsChat(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${requirePollinationsApiKey()}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify(body),
   });
