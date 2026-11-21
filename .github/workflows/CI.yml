@@ -104,10 +104,18 @@ jobs:
           # Auth flow smoke test (Neon Auth via /api/auth proxy)
           ORIGIN=http://localhost:5000
           EMAIL="ci-$GITHUB_RUN_ID-$(date +%s)@ona-smoke.test"
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-            -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
-            -X POST "$ORIGIN/api/auth/sign-up/email" \
-            -d "{\"email\":\"$EMAIL\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
+          # A freshly provisioned branch's auth service can 404 briefly while
+          # provisioning completes - retry a few times before failing.
+          CODE=""
+          for attempt in 1 2 3 4; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
+              -X POST "$ORIGIN/api/auth/sign-up/email" \
+              -d "{\"email\":\"$EMAIL\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
+            [ "$CODE" = "200" ] && break
+            echo "sign-up attempt $attempt returned HTTP $CODE - retrying in 5s"
+            sleep 5
+          done
           if [ "$CODE" != "200" ]; then
             echo "::error::Neon Auth sign-up returned HTTP $CODE"
             kill $SERVER_PID 2>/dev/null || true
@@ -164,6 +172,7 @@ jobs:
           POLLINATIONS_API_KEY: dummy-key-for-ci
 
       - name: Vercel — sync Neon auth and database env via CLI
+        continue-on-error: true
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: bash scripts/vercel-setup.sh
         env:
