@@ -56,6 +56,13 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
         run: |
+          # Prune stale CI branches from previous runs so the free-plan branch
+          # limit can never wedge provisioning (e.g. after cancelled runs).
+          npx -y neon@latest branches list --project-id flat-term-26419434 -o json 2>/dev/null \
+            | jq -r '.[] | select(.name | startswith("ona-ci-")) | .id' \
+            | while read -r id; do
+                npx -y neon@latest branches delete "$id" --project-id flat-term-26419434 -y >/dev/null 2>&1 || true
+              done
           ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
 
       - name: Provision Neon database and auth (optional)
