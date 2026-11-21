@@ -1,3 +1,5 @@
+import { checkPollinationsHealth } from '@/libs/Pollinations';
+
 import { getDb } from '@/libs/DB';
 import { logger } from '@/libs/Logger';
 import { agentJobsSchema, conversationSuperAgentsSchema } from '@/models/Schema';
@@ -21,7 +23,7 @@ export type HealthCheckResult = {
       message?: string;
     };
     externalApis: {
-      fireworks: { status: HealthStatus; message?: string };
+      pollinations: { status: HealthStatus; message?: string };
       daytona: { status: HealthStatus; message?: string };
     };
   };
@@ -86,18 +88,14 @@ async function checkSuperAgent(): Promise<{ status: HealthStatus; activeJobs: nu
   }
 }
 
-async function checkFireworks(): Promise<{ status: HealthStatus; message?: string }> {
+async function checkPollinations(): Promise<{ status: HealthStatus; message?: string }> {
   try {
-    const response = await fetch('https://api.fireworks.ai/health', {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(3000),
-    });
-    if (response.ok) {
-      return { status: 'healthy' };
-    }
-    return { status: 'degraded', message: `HTTP ${response.status}` };
+    const result = await checkPollinationsHealth(3000);
+    return result.ok
+      ? { status: 'healthy' as HealthStatus }
+      : { status: 'degraded' as HealthStatus, message: result.message };
   } catch {
-    return { status: 'degraded', message: 'Unable to reach Fireworks AI' };
+    return { status: 'degraded' as HealthStatus, message: 'Unable to reach Pollinations AI' };
   }
 }
 
@@ -122,10 +120,10 @@ async function checkDaytona(): Promise<{ status: HealthStatus; message?: string 
 }
 
 export async function performHealthCheck(): Promise<HealthCheckResult> {
-  const [dbCheck, superAgentCheck, fireworksCheck, daytonaCheck] = await Promise.all([
+  const [dbCheck, superAgentCheck, pollinationsCheck, daytonaCheck] = await Promise.all([
     checkDatabase(),
     checkSuperAgent(),
-    checkFireworks(),
+    checkPollinations(),
     checkDaytona(),
   ]);
 
@@ -133,7 +131,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   if (dbCheck.status === 'unhealthy') {
     overallStatus = 'unhealthy';
   } else if (dbCheck.status === 'degraded' || superAgentCheck.status === 'degraded' || 
-             fireworksCheck.status === 'degraded' || daytonaCheck.status === 'degraded') {
+             pollinationsCheck.status === 'degraded' || daytonaCheck.status === 'degraded') {
     overallStatus = 'degraded';
   }
 
@@ -144,7 +142,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
       database: dbCheck,
       superAgent: superAgentCheck,
       externalApis: {
-        fireworks: fireworksCheck,
+        pollinations: pollinationsCheck,
         daytona: daytonaCheck,
       },
     },

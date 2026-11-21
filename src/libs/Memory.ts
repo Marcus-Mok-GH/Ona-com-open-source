@@ -1,4 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
+import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
 import { getDb } from '@/libs/DB';
 import { logger as baseLogger } from '@/libs/Logger';
 import { codebaseMemorySchema } from '@/models/Schema';
@@ -6,7 +7,7 @@ import { codebaseMemorySchema } from '@/models/Schema';
 const logger = baseLogger;
 
 const EXTRACTION_MODEL =
-  process.env.FLEET_MODEL ?? 'accounts/fireworks/models/llama-v3p1-8b-instruct';
+  process.env.FLEET_MODEL ?? 'minimax/minimax-m3.1-flash';
 
 const MAX_MEMORY_ITEMS = 50;
 const MAX_INPUT_CHARS = 12000;
@@ -86,7 +87,7 @@ export async function extractAndStoreMemory(
   conversationId?: string | null,
 ): Promise<void> {
   try {
-    const apiKey = process.env.FIREWORKS_API_KEY;
+    const apiKey = process.env.POLLINATIONS_API_KEY;
     if (!apiKey) return;
 
     const excerpt = buildConversationExcerpt(messages);
@@ -94,7 +95,7 @@ export async function extractAndStoreMemory(
 
     const userContent = `Task summary: ${taskSummary.slice(0, 500)}\n\nConversation excerpt:\n${excerpt}`;
 
-    const resp = await fetch('https://api.fireworks.ai/inference/v1/chat/completions', {
+    const resp = await fetch(POLLINATIONS_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({

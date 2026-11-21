@@ -1,7 +1,7 @@
 import { getCircuitBreaker, withRetry, CircuitBreakerError } from '@/libs/CircuitBreaker';
 import { logger } from '@/libs/Logger';
 
-const fireworksBreaker = getCircuitBreaker('fireworks', {
+const pollinationsBreaker = getCircuitBreaker('pollinations', {
   failureThreshold: 5,
   resetTimeoutMs: 30000,
   halfOpenMaxCalls: 2,
@@ -14,14 +14,14 @@ const daytonaBreaker = getCircuitBreaker('daytona', {
 });
 
 export async function callWithResilience<T>(
-  serviceName: 'fireworks' | 'daytona',
+  serviceName: 'pollinations' | 'daytona',
   operation: () => Promise<T>,
   options?: {
     maxRetries?: number;
     initialDelayMs?: number;
   }
 ): Promise<T> {
-  const breaker = serviceName === 'fireworks' ? fireworksBreaker : daytonaBreaker;
+  const breaker = serviceName === 'pollinations' ? pollinationsBreaker : daytonaBreaker;
 
   try {
     return await breaker.execute(() =>
@@ -42,7 +42,7 @@ export async function callWithResilience<T>(
 
 export function getResilienceMetrics() {
   return {
-    fireworks: fireworksBreaker.getMetrics(),
+    pollinations: pollinationsBreaker.getMetrics(),
     daytona: daytonaBreaker.getMetrics(),
   };
 }

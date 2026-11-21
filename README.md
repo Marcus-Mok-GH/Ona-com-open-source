@@ -35,7 +35,7 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 | **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team/) |
 | **Database** | PostgreSQL (auto-migrates on startup) |
-| **AI Provider** | [Fireworks AI](https://fireworks.ai/) |
+| **AI Provider** | [Pollinations AI](https://pollinations.ai/) — MiniMax M3.1 Flash |
 | **Sandboxes** | [Daytona](https://daytona.io/) |
 | **Auth** | Neon Auth (Managed Better Auth), GitHub OAuth device flow |
 | **Session** | [`iron-session`](https://github.com/vvo/iron-session) (7-day expiry, SameSite=Lax) |
@@ -101,7 +101,7 @@ NEON_AUTH_BASE_URL=https://ep-xxx.neonauth...neon.tech/neondb/auth
 NEON_AUTH_COOKIE_SECRET=your-32-plus-character-secret
 
 # ── AI (required) ──
-FIREWORKS_API_KEY=your_fireworks_key
+POLLINATIONS_API_KEY=your_pollinations_key
 
 # ── Sandboxes ──
 DAYTONA_API_KEY=your_daytona_key
@@ -120,7 +120,7 @@ NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
-See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`FIREWORKS_MODEL`, `FIREWORKS_BROWSER_MODEL`, `FIREWORKS_LIBRARIAN_MODEL`, `FIREWORKS_FALLBACK_MODELS`).
+See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`POLLINATIONS_MODEL`, `POLLINATIONS_BROWSER_MODEL`, `POLLINATIONS_LIBRARIAN_MODEL`, `POLLINATIONS_FALLBACK_MODELS`).
 
 ### Step 4: Database Migrations
 

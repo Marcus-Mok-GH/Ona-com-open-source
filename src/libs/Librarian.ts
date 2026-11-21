@@ -3,7 +3,7 @@
  *
  * Architecture:
  *   Main AI ──call_librarian──▶ runLibrarianSubagent()
- *                                  └── own Fireworks call
+ *                                  └── own Pollinations call
  *                                  └── own agentic loop (up to 10 rounds)
  *                                  └── restricted toolset (5 read-only tools)
  *                                  └── returns synthesised report ──▶ Main AI
@@ -12,8 +12,7 @@
  * Inspired by oh-my-openagent's Librarian, ampcode's librarian, and opencode's fetch/search primitives.
  */
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const LIBRARIAN_MODEL = process.env.FIREWORKS_LIBRARIAN_MODEL ?? 'accounts/fireworks/models/kimi-k2p5';
+const LIBRARIAN_MODEL = process.env.POLLINATIONS_LIBRARIAN_MODEL ?? 'minimax/minimax-m3.1-flash';
 const LIBRARIAN_MAX_ITERATIONS = 15;
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -443,7 +442,7 @@ type LibrarianMessage =
   | { role: 'assistant'; content: string; tool_calls?: LibrarianToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -461,15 +460,15 @@ type FireworksNonStreamResponse = {
 // ── Librarian agentic loop ───────────────────────────────────────────────────
 
 async function librarianCall(messages: LibrarianMessage[]): Promise<{ content: string; toolCalls: LibrarianToolCall[] }> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured.');
+  if (!process.env.POLLINATIONS_API_KEY) {
+    throw new Error('POLLINATIONS_API_KEY is not configured.');
   }
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
     },
     body: JSON.stringify({
       model: LIBRARIAN_MODEL,
@@ -488,7 +487,7 @@ async function librarianCall(messages: LibrarianMessage[]): Promise<{ content: s
     throw new Error(`Librarian AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Librarian AI error: ${json.error.message}`);
 
   const msg = json.choices?.[0]?.message;

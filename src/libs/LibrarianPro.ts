@@ -4,7 +4,7 @@
  *
  * Architecture:
  *   Main AI ──call_librarian_pro──▶ runLibrarianProSubagent()
- *                                      └── own Fireworks call
+ *                                      └── own Pollinations call
  *                                      └── own agentic loop (up to 25 rounds)
  *                                      └── 13 internal tools:
  *                                            Static: scrape_page, fetch_url, search_web, npm_package, github_readme
@@ -19,11 +19,11 @@
  */
 
 import { chromium } from 'playwright';
+import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
 import type { Browser, Page } from 'playwright';
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const LIBRARIAN_PRO_MODEL =
-  process.env.FIREWORKS_LIBRARIAN_PRO_MODEL ?? 'accounts/fireworks/models/kimi-k2p5';
+  process.env.POLLINATIONS_LIBRARIAN_PRO_MODEL ?? 'minimax/minimax-m3.1-flash';
 const LIBRARIAN_PRO_MAX_ITERATIONS = 25;
 
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
@@ -807,7 +807,7 @@ type LibrarianProMessage =
   | { role: 'assistant'; content: string; tool_calls?: LibrarianProToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -822,18 +822,18 @@ type FireworksNonStreamResponse = {
   error?: { message?: string };
 };
 
-// ── Fireworks call ─────────────────────────────────────────────────────────────
+// ── Pollinations call ─────────────────────────────────────────────────────────────
 
 async function librarianProCall(
   messages: LibrarianProMessage[],
 ): Promise<{ content: string; reasoning: string; toolCalls: LibrarianProToolCall[] }> {
-  if (!process.env.FIREWORKS_API_KEY) throw new Error('FIREWORKS_API_KEY is not configured.');
+  if (!process.env.POLLINATIONS_API_KEY) throw new Error('POLLINATIONS_API_KEY is not configured.');
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
     },
     body: JSON.stringify({
       model: LIBRARIAN_PRO_MODEL,
@@ -852,7 +852,7 @@ async function librarianProCall(
     throw new Error(`Librarian Pro AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Librarian Pro AI error: ${json.error.message}`);
 
   const msg = json.choices?.[0]?.message;

@@ -1,11 +1,11 @@
 import { githubToolDefinitions, runGitHubTool } from '@/libs/GitHub';
+import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
 import { daytonaToolDefinitions, isDaytonaTool, prebootSandbox, runDaytonaTool } from '@/libs/Daytona';
 import { callLibrarianProToolDefinition, isCallLibrarianProTool, runLibrarianProSubagent } from '@/libs/LibrarianPro';
 import { callOracleToolDefinition, isCallOracleTool, runOracleSubagent } from '@/libs/Oracle';
 import { logger } from '@/libs/Logger';
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const FLEET_MODEL = process.env.FIREWORKS_FLEET_MODEL ?? process.env.FIREWORKS_MODEL ?? 'accounts/fireworks/routers/kimi-k2p5-turbo';
+const FLEET_MODEL = process.env.POLLINATIONS_FLEET_MODEL ?? process.env.POLLINATIONS_MODEL ?? 'minimax/minimax-m3.1-flash';
 const MAX_FLEET_ITERATIONS = 30;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ type FleetMessage = {
   }>;
 };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -114,7 +114,7 @@ const FLEET_TASK_COMPLETE_TOOL = {
   },
 };
 
-// ── Fireworks non-streaming call ─────────────────────────────────────────────
+// ── Pollinations non-streaming call ─────────────────────────────────────────────
 
 function parseFleetToolArgs(value: string): Record<string, unknown> {
   try {
@@ -124,7 +124,7 @@ function parseFleetToolArgs(value: string): Record<string, unknown> {
   }
 }
 
-async function callFleetFireworks(
+async function callFleetPollinations(
   messages: FleetMessage[],
   tools: unknown[],
 ): Promise<{
@@ -132,15 +132,15 @@ async function callFleetFireworks(
   toolCalls: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
   finishReason: string | null;
 }> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured.');
+  if (!process.env.POLLINATIONS_API_KEY) {
+    throw new Error('POLLINATIONS_API_KEY is not configured.');
   }
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
     },
     body: JSON.stringify({
       model: FLEET_MODEL,
@@ -158,7 +158,7 @@ async function callFleetFireworks(
     throw new Error(`Fleet AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) {
     throw new Error(`Fleet AI error: ${json.error.message}`);
   }
@@ -228,7 +228,7 @@ export async function runFleetAgent(
     const recentSigs: string[] = [];
 
     for (let i = 0; i < MAX_FLEET_ITERATIONS; i++) {
-      const { content, toolCalls, finishReason } = await callFleetFireworks(conversation, tools);
+      const { content, toolCalls, finishReason } = await callFleetPollinations(conversation, tools);
 
       if (!toolCalls.length || finishReason === 'stop') {
         result.summary = content || 'Agent completed without calling task_complete.';

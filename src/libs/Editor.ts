@@ -3,7 +3,7 @@
  *
  * Architecture:
  *   Main AI ──call_editor──▶ runEditorSubagent()
- *                               └── own Fireworks call
+ *                               └── own Pollinations call
  *                               └── own agentic loop (up to 15 rounds)
  *                               └── restricted toolset (3 tools: read_file, write_file, edit_file)
  *                               └── operates on the local project filesystem
@@ -14,12 +14,12 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { POLLINATIONS_API_URL, requirePollinationsApiKey, pollinationsChat } from '@/libs/Pollinations';
 import { resolve, dirname } from 'path';
 import { createFileDiff } from './FileDiff';
 import type { TouchedFileDiff } from './FileDiff';
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const EDITOR_MODEL = process.env.FIREWORKS_EDITOR_MODEL ?? 'accounts/fireworks/models/glm-5p1';
+const EDITOR_MODEL = process.env.POLLINATIONS_EDITOR_MODEL ?? 'minimax/minimax-m3.1-flash';
 const EDITOR_MAX_ITERATIONS = 15;
 
 const PROJECT_ROOT = process.cwd();
@@ -188,7 +188,7 @@ type EditorMessage =
   | { role: 'assistant'; content: string; tool_calls?: EditorToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -204,15 +204,15 @@ type FireworksNonStreamResponse = {
 };
 
 async function editorCall(messages: EditorMessage[]): Promise<{ content: string; toolCalls: EditorToolCall[] }> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured.');
+  if (!process.env.POLLINATIONS_API_KEY) {
+    throw new Error('POLLINATIONS_API_KEY is not configured.');
   }
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
     },
     body: JSON.stringify({
       model: EDITOR_MODEL,
@@ -231,7 +231,7 @@ async function editorCall(messages: EditorMessage[]): Promise<{ content: string;
     throw new Error(`Editor AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Editor AI error: ${json.error.message}`);
 
   const msg = json.choices?.[0]?.message;

@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { POLLINATIONS_API_URL } from '@/libs/Pollinations';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
@@ -21,7 +22,6 @@ import type { TouchedFileDiff } from '@/libs/FileDiff';
 
 export const runtime = 'nodejs';
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 
 // ── Ultrawork todo types ────────────────────────────────────────────────────
 type TodoStatus = 'pending' | 'in_progress' | 'done';
@@ -168,22 +168,22 @@ const ULTRAWORK_TOOLS = [TODO_WRITE_TOOL, TODO_READ_TOOL, TASK_COMPLETE_TOOL];
 export const ONA_MODELS = {
   'ona-max': {
     label: 'Hands on experience',
-    description: 'Kimi K2.5 — fast, collaborative, agentic coding',
-    fireworksId: 'accounts/fireworks/routers/kimi-k2p5-turbo',
+    description: 'MiniMax M3.1 Flash — fast, collaborative, agentic coding',
+    pollinationsId: 'minimax/minimax-m3.1-flash',
     maxTokens: 16384,
     temperature: 0.6,
   },
   'ona-hands-off': {
     label: 'Hands off experience',
-    description: 'Qwen3 Coder 480B — maximum autonomy, agentic coding, 262K context, RL-trained tool use',
-    fireworksId: 'accounts/fireworks/models/qwen3-coder-480b-a35b-instruct',
+    description: 'MiniMax M3.1 Flash — maximum autonomy, agentic coding with tool calling and reasoning',
+    pollinationsId: 'minimax/minimax-m3.1-flash',
     maxTokens: 65536,
     temperature: 0.0,
   },
   'ona-plan': {
     label: 'Plan mode',
     description: 'Planning only — asks clarifying questions and writes a high-level plan',
-    fireworksId: 'accounts/fireworks/routers/kimi-k2p5-turbo',
+    pollinationsId: 'minimax/minimax-m3.1-flash',
     maxTokens: 16384,
     temperature: 0.3,
   },
@@ -191,14 +191,14 @@ export const ONA_MODELS = {
 
 export type OnaModelKey = keyof typeof ONA_MODELS;
 
-const DEFAULT_FIREWORKS_MODELS = [
-  'accounts/fireworks/routers/kimi-k2p5-turbo',
-  'accounts/fireworks/models/kimi-k2-instruct-0905',
-  'accounts/fireworks/models/llama4-maverick-instruct-basic',
+const DEFAULT_POLLINATIONS_MODELS = [
+  'minimax/minimax-m3.1-flash',
+  'minimax/minimax-m3',
+  'minimax/minimax-m2.7',
 ];
 const FALLBACK_MODELS = [
-  process.env.FIREWORKS_MODEL,
-  ...(process.env.FIREWORKS_FALLBACK_MODELS?.split(',') ?? DEFAULT_FIREWORKS_MODELS),
+  process.env.POLLINATIONS_MODEL,
+  ...(process.env.POLLINATIONS_FALLBACK_MODELS?.split(',') ?? DEFAULT_POLLINATIONS_MODELS),
 ].filter((model): model is string => Boolean(model?.trim()))
   .map(model => model.trim())
   .filter((model, index, models) => models.indexOf(model) === index);
@@ -750,7 +750,7 @@ type ToolCall = {
   };
 };
 
-type FireworksDelta = {
+type PollinationsDelta = {
   content?: string | null;
   reasoning_content?: string | null;
   tool_calls?: Array<{
@@ -763,9 +763,9 @@ type FireworksDelta = {
 
 type FinishReason = 'stop' | 'tool_calls' | 'length' | 'error' | null;
 
-type FireworksResponse = {
+type PollinationsResponse = {
   choices?: Array<{
-    delta?: FireworksDelta;
+    delta?: PollinationsDelta;
     finish_reason?: string | null;
   }>;
   usage?: {
@@ -776,7 +776,7 @@ type FireworksResponse = {
   error?: { message?: string };
 };
 
-type FireworksUsage = NonNullable<FireworksResponse['usage']>;
+type PollinationsUsage = NonNullable<PollinationsResponse['usage']>;
 
 function normalizeMessages(messages: ApiMessage[]) {
   return messages.map((m) => {
@@ -785,14 +785,13 @@ function normalizeMessages(messages: ApiMessage[]) {
   });
 }
 
-async function callFireworks(body: Record<string, unknown>, modelOverride?: string): Promise<Response> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured. Please add it in environment secrets.');
+async function callPollinations(body: Record<string, unknown>, modelOverride?: string): Promise<Response> {
+  if (!process.env.POLLINATIONS_API_KEY) {
+    throw new Error('POLLINATIONS_API_KEY is not configured. Please add it in environment secrets.');
   }
 
   // When a specific model is requested, try it first, then fall back to the
-  // standard fallback list if it is unavailable (e.g. not deployed as
-  // serverless on this Fireworks account).
+  // standard fallback list if it is unavailable on the Pollinations catalog.
   const modelsToTry = modelOverride
     ? [modelOverride, ...FALLBACK_MODELS.filter(m => m !== modelOverride)]
     : FALLBACK_MODELS;
@@ -801,11 +800,11 @@ async function callFireworks(body: Record<string, unknown>, modelOverride?: stri
   for (const model of modelsToTry) {
     let res: Response;
     try {
-      res = await fetch(FIREWORKS_API_URL, {
+      res = await fetch(POLLINATIONS_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+          Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
         },
         body: JSON.stringify({ model, ...body }),
         signal: AbortSignal.timeout(120000),
@@ -850,18 +849,18 @@ async function callFireworks(body: Record<string, unknown>, modelOverride?: stri
   throw lastError ?? new Error('Request failed after multiple attempts. Please try again.');
 }
 
-async function streamFireworksCall(
+async function streamPollinationsCall(
   body: Record<string, unknown>,
   onDelta: (delta: string) => void,
   modelOverride?: string,
-): Promise<{ content: string; toolCalls: ToolCall[]; finishReason: FinishReason; usage?: FireworksUsage }> {
-  const res = await callFireworks({ ...body, stream: true }, modelOverride);
+): Promise<{ content: string; toolCalls: ToolCall[]; finishReason: FinishReason; usage?: PollinationsUsage }> {
+  const res = await callPollinations({ ...body, stream: true }, modelOverride);
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   let content = '';
   let finishReason: FinishReason = null;
-  let usage: FireworksUsage | undefined;
+  let usage: PollinationsUsage | undefined;
   let inThinkBlock = false;
   const toolCallsMap = new Map<number, { id: string; type: 'function'; function: { name: string; arguments: string } }>();
 
@@ -878,12 +877,12 @@ async function streamFireworksCall(
         const raw = line.slice(6).trim();
         if (raw === '[DONE]') break outer;
         try {
-          const json = JSON.parse(raw) as FireworksResponse;
+          const json = JSON.parse(raw) as PollinationsResponse;
           if (json.usage) {
             usage = json.usage;
           }
           const choice = json.choices?.[0];
-          const delta = choice?.delta as FireworksDelta | undefined;
+          const delta = choice?.delta as PollinationsDelta | undefined;
           if (!delta) continue;
 
           if (choice?.finish_reason) {
@@ -1212,7 +1211,7 @@ export async function POST(req: NextRequest) {
       const modelConfig = model && model in ONA_MODELS
         ? ONA_MODELS[model as OnaModelKey]
         : ONA_MODELS['ona-max'];
-      const fireworksModelId = modelConfig.fireworksId;
+      const pollinationsModelId = modelConfig.pollinationsId;
       const agentMaxTokens = modelConfig.maxTokens;
       const agentTemperature = modelConfig.temperature;
       const isHandsOff = model === 'ona-hands-off';
@@ -1247,8 +1246,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      async function streamChargedFireworksCall(body: Record<string, unknown>, onDelta: (delta: string) => void) {
-        const result = await streamFireworksCall(body, onDelta, fireworksModelId);
+      async function streamChargedPollinationsCall(body: Record<string, unknown>, onDelta: (delta: string) => void) {
+        const result = await streamPollinationsCall(body, onDelta, pollinationsModelId);
         // Bill the authenticated user for this top-level provider call. Applies
         // uniformly to session-authed UI callers and API-key callers so API
         // usage is metered the same as interactive usage. (Subagent calls —
@@ -1345,7 +1344,7 @@ export async function POST(req: NextRequest) {
 
         for (;;) {
           let iterText = '';
-          const { content, toolCalls, finishReason } = await streamChargedFireworksCall(
+          const { content, toolCalls, finishReason } = await streamChargedPollinationsCall(
             { messages: conversation, tools: noGhTools, tool_choice: 'auto', max_tokens: agentMaxTokens, temperature: agentTemperature, reasoning_effort: 'high' },
             (delta) => {
               emit({ delta });
@@ -1568,7 +1567,7 @@ export async function POST(req: NextRequest) {
         // ───────────────────────────────────────────────────────────────────
 
         let iterText = '';
-        const { content, toolCalls, finishReason } = await streamChargedFireworksCall(
+        const { content, toolCalls, finishReason } = await streamChargedPollinationsCall(
           {
             messages: callMessages,
             tools: isPlanMode
