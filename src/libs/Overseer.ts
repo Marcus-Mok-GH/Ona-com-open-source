@@ -1,5 +1,5 @@
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const OVERSEER_MODEL = process.env.FIREWORKS_OVERSEER_MODEL ?? 'accounts/fireworks/models/glm-5p1';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
+const OVERSEER_MODEL = process.env.POLLINATIONS_OVERSEER_MODEL ?? 'minimax/minimax-m3.1-flash';
 const OVERSEER_MAX_ITERATIONS = 8;
 
 const OVERSEER_SYSTEM_PROMPT = `You are OVERSEER, a strict plan-quality reviewer.
@@ -32,7 +32,7 @@ type OverseerMessage = {
   tool_calls?: OverseerToolCall[];
 };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -139,15 +139,12 @@ async function runInternalTool(name: string, args: Record<string, unknown>): Pro
 }
 
 async function overseerCall(messages: OverseerMessage[]): Promise<{ content: string; toolCalls: OverseerToolCall[] }> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured.');
-  }
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: OVERSEER_MODEL,
@@ -166,7 +163,7 @@ async function overseerCall(messages: OverseerMessage[]): Promise<{ content: str
     throw new Error(`Overseer AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Overseer AI error: ${json.error.message}`);
   const msg = json.choices?.[0]?.message;
   const toolCalls: OverseerToolCall[] = (msg?.tool_calls ?? []).map(tc => ({

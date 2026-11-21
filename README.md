@@ -16,14 +16,14 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
   - **Librarian Pro** — Unified research + browser agent replacing both Librarian and Browser Use.
   - **Oracle** — Deep-reasoning subagent (GLM 5.1) for architecture decisions, debugging, and synthesis.
   - **Browser Use** — Browser automation (up to 25 iterations) using accessibility tree navigation.
-  - **Editor** — Code editing subagent with its own Fireworks call.
+  - **Editor** — Code editing subagent with its own Pollinations call.
 - **Super Agent:** Autonomous background agent with configurable heartbeat intervals for proactive, unsupervised work.
 - **Credits System:** 1 credit = 1 cent. Deducted per provider call using `CREDITS_PER_1000_TOKENS` (fallback: 1/1k tokens, 1-credit minimum).
 - **API Keys:** Per-user hashed API keys for programmatic access (`Authorization: Bearer <key>`).
 - **Streaming Chat UI:** SSE streaming, tool-step visualization, todo panel, @-mention file picker, image upload/paste, model selector, theme toggle.
 - **Internationalization (i18n):** Multi-language support (`en`, `fr`) powered by `next-intl` with Crowdin integration.
 - **Authentication:** Neon Auth (Managed Better Auth) + GitHub OAuth device flow for repository access.
-- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Fireworks AI, Daytona, and Super Agent status.
+- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Pollinations AI, Daytona, and Super Agent status.
 - **Resilience:** Circuit breaker, resilient API client, graceful shutdown, memory monitoring, and timeout utilities.
 
 ## 🛠️ Tech Stack
@@ -35,7 +35,7 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 | **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team/) |
 | **Database** | PostgreSQL (auto-migrates on startup) |
-| **AI Provider** | [Fireworks AI](https://fireworks.ai/) |
+| **AI Provider** | [Pollinations AI](https://pollinations.ai/) — MiniMax M3.1 Flash |
 | **Sandboxes** | [Daytona](https://daytona.io/) |
 | **Auth** | Neon Auth (Managed Better Auth), GitHub OAuth device flow |
 | **Session** | [`iron-session`](https://github.com/vvo/iron-session) (7-day expiry, SameSite=Lax) |
@@ -47,14 +47,13 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 
 ## 🤖 AI Models
 
-Defined in `src/app/api/chat/route.ts` as `ONA_MODELS`. All route through Fireworks AI with a fallback chain; overridable via environment variables.
+Defined in `src/app/api/chat/route.ts` as `ONA_MODELS`. All route through Pollinations AI (MiniMax M3.1 Flash) with a fallback chain; overridable via environment variables.
 
 | Model Key | Model | Purpose |
 | :--- | :--- | :--- |
-| `ona-max` | GLM 5.1 | Default for accuracy |
-| `ona-max-fast` | Kimi K2.5 Turbo | Fastest responses |
-| `ona-mini` | DeepSeek V3.2 | Lightweight tasks |
-| `ona-hands-off` | — | Super Agent autonomous mode |
+| `ona-max` | MiniMax M3.1 Flash | Default hands-on agentic mode |
+| `ona-hands-off` | MiniMax M3.1 Flash | Maximum autonomy mode |
+| `ona-plan` | MiniMax M3.1 Flash | Planning-only mode |
 
 ## 📥 Installation
 
@@ -100,8 +99,9 @@ POSTGRES_URL=postgresql://...pooler...neon.tech/neondb?sslmode=require
 NEON_AUTH_BASE_URL=https://ep-xxx.neonauth...neon.tech/neondb/auth
 NEON_AUTH_COOKIE_SECRET=your-32-plus-character-secret
 
-# ── AI (required) ──
-FIREWORKS_API_KEY=your_fireworks_key
+# ── AI (optional — anonymous tier works without a key) ──
+# Get a key at https://enter.pollinations.ai for higher rate limits.
+POLLINATIONS_API_KEY=your_pollinations_key
 
 # ── Sandboxes ──
 DAYTONA_API_KEY=your_daytona_key
@@ -120,7 +120,7 @@ NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
-See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`FIREWORKS_MODEL`, `FIREWORKS_BROWSER_MODEL`, `FIREWORKS_LIBRARIAN_MODEL`, `FIREWORKS_FALLBACK_MODELS`).
+See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`POLLINATIONS_MODEL`, `POLLINATIONS_BROWSER_MODEL`, `POLLINATIONS_LIBRARIAN_MODEL`, `POLLINATIONS_FALLBACK_MODELS`).
 
 ### Step 4: Database Migrations
 

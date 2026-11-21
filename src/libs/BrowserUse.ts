@@ -5,7 +5,7 @@
  *   Main AI ──call_browser_use──▶ runBrowserUseSubagent()
  *                                    └── creates Firecrawl CDP session (/v2/browser)
  *                                    └── connects Playwright over CDP
- *                                    └── own Fireworks agentic loop (up to 20 rounds)
+ *                                    └── own Pollinations agentic loop (up to 20 rounds)
  *                                    └── granular tools: navigate / snapshot / click / type / scroll / press / select / screenshot / search
  *                                    └── accessibility tree representation (no vision needed)
  *                                    └── closes CDP session when done
@@ -21,11 +21,11 @@
  */
 
 import { chromium } from 'playwright';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
 import type { Browser, Page } from 'playwright';
 
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const BROWSER_USE_MODEL =
-  process.env.FIREWORKS_BROWSER_MODEL ?? 'accounts/fireworks/models/kimi-k2-instruct-0905';
+  process.env.POLLINATIONS_BROWSER_MODEL ?? 'minimax/minimax-m3.1-flash';
 const BROWSER_USE_MAX_ITERATIONS = 25;
 const FIRECRAWL_BASE_URL = process.env.FIRECRAWL_API_URL ?? 'https://api.firecrawl.dev';
 const FIRECRAWL_SESSION_TTL = Number(process.env.FIRECRAWL_BROWSER_TTL ?? '300');
@@ -640,7 +640,7 @@ type BrowserUseMessage =
   | { role: 'assistant'; content: string; tool_calls?: BrowserUseToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -655,18 +655,17 @@ type FireworksNonStreamResponse = {
   error?: { message?: string };
 };
 
-// ── Fireworks call ────────────────────────────────────────────────────────────
+// ── Pollinations call ────────────────────────────────────────────────────────────
 
 async function browserUseCall(
   messages: BrowserUseMessage[],
 ): Promise<{ content: string; toolCalls: BrowserUseToolCall[] }> {
-  if (!process.env.FIREWORKS_API_KEY) throw new Error('FIREWORKS_API_KEY is not configured.');
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: BROWSER_USE_MODEL,
@@ -685,7 +684,7 @@ async function browserUseCall(
     throw new Error(`Browser Use AI error (${res.status}): ${text}`);
   }
 
-  const json = (await res.json()) as FireworksNonStreamResponse;
+  const json = (await res.json()) as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Browser Use AI error: ${json.error.message}`);
 
   const msg = json.choices?.[0]?.message;

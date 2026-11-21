@@ -110,7 +110,7 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           exit 0
         env:
-          FIREWORKS_API_KEY: dummy-key-for-ci
+          POLLINATIONS_API_KEY: dummy-key-for-ci
           # Used only when the Neon provisioning step did not run (no NEON_API_KEY secret)
           POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ona
           SESSION_SECRET: ci-smoke-test-secret-value-32-chars-min
@@ -154,7 +154,7 @@ jobs:
           echo "Auth flow OK"
           kill $SERVER_PID 2>/dev/null || true
         env:
-          FIREWORKS_API_KEY: dummy-key-for-ci
+          POLLINATIONS_API_KEY: dummy-key-for-ci
 
       - name: Vercel — sync Neon auth and database env via CLI
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
