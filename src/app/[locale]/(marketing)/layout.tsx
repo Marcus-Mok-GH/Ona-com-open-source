@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
-import { GetStartedLink } from '@/components/GetStartedLink';
+import { SessionHeaderActions } from '@/components/SessionHeaderActions';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 
 export default async function Layout(props: {
@@ -36,22 +36,7 @@ export default async function Layout(props: {
           </li>
         </>
       )}
-      rightNav={(
-        <>
-          <Link
-            href="/dashboard"
-            className="rounded-lg px-3 py-1.5 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          >
-            Sign In
-          </Link>
-          <GetStartedLink
-            className="rounded-lg bg-[var(--text-primary)] px-3 py-1.5 text-[var(--bg)] transition-opacity hover:opacity-80"
-            locale={locale}
-          >
-            Get Started
-          </GetStartedLink>
-        </>
-      )}
+      rightNav={<SessionHeaderActions locale={locale} />}
     >
       {props.children}
     </BaseTemplate>
