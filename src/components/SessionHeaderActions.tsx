@@ -30,7 +30,7 @@ export function SessionHeaderActions({ locale }: Props) {
           Dashboard
         </Link>
         <Link
-          href={localizedHref('/app', locale)}
+          href={localizedHref('/task', locale)}
           className="rounded-lg bg-[var(--text-primary)] px-3 py-1.5 text-[var(--bg)] transition-opacity hover:opacity-80"
         >
           Open App
