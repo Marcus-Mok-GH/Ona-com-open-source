@@ -14,6 +14,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (scopeFailure) {
     return authFailureResponse(scopeFailure);
   }
+  if (!auth) {
+    return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  }
 
   const { id } = await params;
   const { title } = await req.json() as { title: string };
@@ -21,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await db
     .update(conversationsSchema)
     .set({ title, updatedAt: new Date() })
-    .where(auth ? and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)) : eq(conversationsSchema.id, id));
+    .where(and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)));
 
   return new Response(null, { status: 204 });
 }
@@ -35,19 +38,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (scopeFailure) {
     return authFailureResponse(scopeFailure);
   }
+  if (!auth) {
+    return Response.json({ error: 'Authentication required.' }, { status: 401 });
+  }
 
   const { id } = await params;
 
   const [conv] = await db
     .select({ sandboxId: conversationsSchema.sandboxId })
     .from(conversationsSchema)
-    .where(auth ? and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)) : eq(conversationsSchema.id, id));
+    .where(and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)));
 
   if (conv?.sandboxId) {
     await deleteSandboxById(conv.sandboxId);
   }
 
-  await db.delete(conversationsSchema).where(auth ? and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)) : eq(conversationsSchema.id, id));
+  await db.delete(conversationsSchema).where(and(eq(conversationsSchema.id, id), eq(conversationsSchema.userId, auth.userId)));
 
   return new Response(null, { status: 204 });
 }
