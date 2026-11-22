@@ -3,9 +3,7 @@
     "home_link": "Accueil",
     "about_link": "A propos",
     "counter_link": "Compteur",
-    "portfolio_link": "Portfolio",
-    "sign_in_link": "Se connecter",
-    "sign_up_link": "S'inscrire"
+    "portfolio_link": "Portfolio"
   },
   "BaseTemplate": {
     "description": "Plateforme d'opérations IA native",
