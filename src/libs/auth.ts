@@ -1,5 +1,5 @@
-import type { SessionUser } from '@/libs/ReplitAuth';
-import { getSession } from '@/libs/ReplitAuth';
+import type { SessionUser } from '@/libs/NeonAuth';
+import { getSession } from '@/libs/NeonAuth';
 
 export type { SessionUser };
 

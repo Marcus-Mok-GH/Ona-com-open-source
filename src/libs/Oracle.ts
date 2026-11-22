@@ -1,5 +1,5 @@
-const FIREWORKS_API_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
-const ORACLE_MODEL = process.env.FIREWORKS_ORACLE_MODEL ?? 'accounts/fireworks/models/glm-5p1';
+import { POLLINATIONS_API_URL, pollinationsAuthHeaders } from '@/libs/Pollinations';
+const ORACLE_MODEL = process.env.POLLINATIONS_ORACLE_MODEL ?? 'minimax/minimax-m3.1-flash';
 const ORACLE_MAX_REFINEMENT_PASSES = Math.max(1, Math.min(Number(process.env.ORACLE_MAX_REFINEMENT_PASSES ?? '4'), 8));
 
 const ORACLE_SYSTEM_PROMPT = `You are THE ORACLE, a specialist reasoning subagent inside ONA but OPEN SOURCE.
@@ -29,7 +29,7 @@ type OracleMessage = {
   content: string;
 };
 
-type FireworksNonStreamResponse = {
+type PollinationsNonStreamResponse = {
   choices?: Array<{
     message?: {
       content?: string | null;
@@ -40,15 +40,12 @@ type FireworksNonStreamResponse = {
 };
 
 async function oracleCall(messages: OracleMessage[], maxTokens = 32768): Promise<{ content: string; reasoning: string }> {
-  if (!process.env.FIREWORKS_API_KEY) {
-    throw new Error('FIREWORKS_API_KEY is not configured.');
-  }
 
-  const res = await fetch(FIREWORKS_API_URL, {
+  const res = await fetch(POLLINATIONS_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREWORKS_API_KEY}`,
+      ...pollinationsAuthHeaders(),
     },
     body: JSON.stringify({
       model: ORACLE_MODEL,
@@ -65,7 +62,7 @@ async function oracleCall(messages: OracleMessage[], maxTokens = 32768): Promise
     throw new Error(`Oracle AI error (${res.status}): ${text}`);
   }
 
-  const json = await res.json() as FireworksNonStreamResponse;
+  const json = await res.json() as PollinationsNonStreamResponse;
   if (json.error?.message) throw new Error(`Oracle AI error: ${json.error.message}`);
 
   const msg = json.choices?.[0]?.message;

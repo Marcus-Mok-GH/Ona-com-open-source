@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/libs/DB';
-import { getSession } from '@/libs/ReplitAuth';
+import { getSession } from '@/libs/NeonAuth';
 import { apiKeysSchema } from '@/models/Schema';
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

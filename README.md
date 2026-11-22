@@ -2,7 +2,7 @@
 
 An open-source clone of the [Ona](https://ona.com) platform — a full-stack **AI background software engineering agent**. Users describe tasks in a chat UI, and an autonomous agent uses GitHub, Daytona sandboxes, a Librarian research subagent, an Oracle deep-reasoning subagent, and a Browser Use subagent to deliver changes end-to-end: **task in → pull request out**.
 
-Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **Drizzle ORM** + **PostgreSQL**, deployed via Replit/Vercel.
+Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **Drizzle ORM** + **PostgreSQL** (Neon), deployed via Replit/Vercel.
 
 ---
 
@@ -16,14 +16,14 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
   - **Librarian Pro** — Unified research + browser agent replacing both Librarian and Browser Use.
   - **Oracle** — Deep-reasoning subagent (GLM 5.1) for architecture decisions, debugging, and synthesis.
   - **Browser Use** — Browser automation (up to 25 iterations) using accessibility tree navigation.
-  - **Editor** — Code editing subagent with its own Fireworks call.
+  - **Editor** — Code editing subagent with its own Pollinations call.
 - **Super Agent:** Autonomous background agent with configurable heartbeat intervals for proactive, unsupervised work.
 - **Credits System:** 1 credit = 1 cent. Deducted per provider call using `CREDITS_PER_1000_TOKENS` (fallback: 1/1k tokens, 1-credit minimum).
 - **API Keys:** Per-user hashed API keys for programmatic access (`Authorization: Bearer <key>`).
 - **Streaming Chat UI:** SSE streaming, tool-step visualization, todo panel, @-mention file picker, image upload/paste, model selector, theme toggle.
 - **Internationalization (i18n):** Multi-language support (`en`, `fr`) powered by `next-intl` with Crowdin integration.
-- **Authentication:** Replit OIDC (PKCE + nonce) + GitHub OAuth device flow for repository access.
-- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Fireworks AI, Daytona, and Super Agent status.
+- **Authentication:** Neon Auth (Managed Better Auth) + GitHub OAuth device flow for repository access.
+- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Pollinations AI, Daytona, and Super Agent status.
 - **Resilience:** Circuit breaker, resilient API client, graceful shutdown, memory monitoring, and timeout utilities.
 
 ## 🛠️ Tech Stack
@@ -35,9 +35,9 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 | **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team/) |
 | **Database** | PostgreSQL (auto-migrates on startup) |
-| **AI Provider** | [Fireworks AI](https://fireworks.ai/) |
+| **AI Provider** | [Pollinations AI](https://pollinations.ai/) — MiniMax M3.1 Flash |
 | **Sandboxes** | [Daytona](https://daytona.io/) |
-| **Auth** | Replit OIDC (`openid-client`), GitHub OAuth device flow |
+| **Auth** | Neon Auth (Managed Better Auth), GitHub OAuth device flow |
 | **Session** | [`iron-session`](https://github.com/vvo/iron-session) (7-day expiry, SameSite=Lax) |
 | **Research** | [Firecrawl](https://firecrawl.dev/), DuckDuckGo search |
 | **i18n** | [`next-intl`](https://next-intl.dev/) |
@@ -47,14 +47,13 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 
 ## 🤖 AI Models
 
-Defined in `src/app/api/chat/route.ts` as `ONA_MODELS`. All route through Fireworks AI with a fallback chain; overridable via environment variables.
+Defined in `src/app/api/chat/route.ts` as `ONA_MODELS`. All route through Pollinations AI (MiniMax M3.1 Flash) with a fallback chain; overridable via environment variables.
 
 | Model Key | Model | Purpose |
 | :--- | :--- | :--- |
-| `ona-max` | GLM 5.1 | Default for accuracy |
-| `ona-max-fast` | Kimi K2.5 Turbo | Fastest responses |
-| `ona-mini` | DeepSeek V3.2 | Lightweight tasks |
-| `ona-hands-off` | — | Super Agent autonomous mode |
+| `ona-max` | MiniMax M3.1 Flash | Default hands-on agentic mode |
+| `ona-hands-off` | MiniMax M3.1 Flash | Maximum autonomy mode |
+| `ona-plan` | MiniMax M3.1 Flash | Planning-only mode |
 
 ## 📥 Installation
 
@@ -79,23 +78,30 @@ npm install
 
 > **On Replit:** Use the Replit package installer instead of raw `npm install` to avoid `ENOTEMPTY` errors. See `replit.md` for details.
 
-### Step 3: Configure Environment Variables
+### Step 3: Provision Neon (database + auth)
 
-Create a `.env.local` file in the root directory:
+With a [Neon API key](https://neon.com/docs/manage/api-keys):
+
+```bash
+NEON_API_KEY=your_neon_api_key bash scripts/neon-setup.sh
+```
+
+This (idempotently) finds or creates the Neon project, creates the `ona` branch if needed, enables Neon Auth, allows `http://localhost:5000`, and writes the database + auth environment variables to `.env.local`.
+
+### Step 4: Configure Environment Variables
+
+`scripts/neon-setup.sh` fills in the database and auth variables. For anything else, create a `.env.local` file in the root directory:
 
 ```env
-# ── Database (tried in order) ──
-POSTGRES_URL=postgresql://user:password@host:5432/dbname
-# POSTGRES_PRISMA_URL=
+# ── Database + Auth: written by scripts/neon-setup.sh ──
+POSTGRES_URL=postgresql://...pooler...neon.tech/neondb?sslmode=require
 # POSTGRES_URL_NON_POOLING=
-# POSTGRES_DATABASE_URL=
-# DATABASE_URL=
+NEON_AUTH_BASE_URL=https://ep-xxx.neonauth...neon.tech/neondb/auth
+NEON_AUTH_COOKIE_SECRET=your-32-plus-character-secret
 
-# ── Session ──
-SESSION_SECRET=your-32-plus-character-secret
-
-# ── AI (required) ──
-FIREWORKS_API_KEY=your_fireworks_key
+# ── AI (optional — anonymous tier works without a key) ──
+# Get a key at https://enter.pollinations.ai for higher rate limits.
+POLLINATIONS_API_KEY=your_pollinations_key
 
 # ── Sandboxes ──
 DAYTONA_API_KEY=your_daytona_key
@@ -114,7 +120,7 @@ NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
-See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`FIREWORKS_MODEL`, `FIREWORKS_BROWSER_MODEL`, `FIREWORKS_LIBRARIAN_MODEL`, `FIREWORKS_FALLBACK_MODELS`).
+See `src/libs/Env.ts` for the full list of environment variables and optional model overrides (`POLLINATIONS_MODEL`, `POLLINATIONS_BROWSER_MODEL`, `POLLINATIONS_LIBRARIAN_MODEL`, `POLLINATIONS_FALLBACK_MODELS`).
 
 ### Step 4: Database Migrations
 
@@ -222,13 +228,14 @@ The application runs on **port 5000**, host **0.0.0.0** (required for Replit pre
 
 ## 🔐 Authentication
 
-### Replit OIDC (Primary)
+### Neon Auth (Managed Better Auth)
 
-Uses `openid-client` with PKCE + nonce against `https://replit.com/oidc`. Session stored in an iron-session cookie (`replit_auth_session`, SameSite=Lax, 7-day expiry).
+Authentication is handled by [Neon Auth](https://neon.com/docs/auth) — Neon's managed Better Auth service, stored in the `neon_auth` schema of the project's Neon database (branch-isolated).
 
-- **Mobile:** Opens Replit sign-in in a separate tab, polls `/api/auth/user?optional=1`.
-- **Desktop:** Direct redirect to `/api/login?returnTo=...`.
-- **Completion signals:** BroadcastChannel + localStorage.
+- **Sign-in/sign-up:** Email + password via server actions (`auth.signIn.email` / `auth.signUp.email`), form on `/sign-in`.
+- **Session:** `getSession()` in `src/libs/NeonAuth.ts` maps the Better Auth session to the app's `SessionUser`.
+- **API:** Better Auth endpoints are proxied through `/api/auth/[...path]` (`auth.handler()`).
+- **Provisioning:** `NEON_API_KEY=... bash scripts/neon-setup.sh` enables Neon Auth on the branch, allows the app's domains, and writes `NEON_AUTH_BASE_URL` + `NEON_AUTH_COOKIE_SECRET` to `.env.local`.
 
 ### GitHub OAuth Device Flow
 

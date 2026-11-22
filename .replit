@@ -1,7 +1,9 @@
 modules = ["web", "bash", "nodejs-22"]
 [agent]
 expertMode = true
-integrations = ["javascript_log_in_with_replit:2.0.0"]
+# Auth and database are provided by Neon (Managed Better Auth + Postgres).
+# Provision with: NEON_API_KEY=... bash scripts/neon-setup.sh
+integrations = []
 
 [nix]
 channel = "stable-25_05"
@@ -47,7 +49,11 @@ externalPort = 3001
 [userenv]
 
 [userenv.shared]
-SUPER_AGENT_HEARTBEAT_SECRET = "a15bc3a230d7199204285ca2a4138dafb95d785364f079d3ac3dcd497fdb30ed"
+# Secrets must NOT live in this file (it is committed to git).
+# Set SUPER_AGENT_HEARTBEAT_SECRET (and other secrets) in Replit:
+#   Workspace -> Tools -> Secrets. The previously committed value has been
+#   exposed and should be rotated.
+SUPER_AGENT_HEARTBEAT_SECRET = "SET-VIA-REPLIT-SECRETS"
 
 [userenv.development]
 

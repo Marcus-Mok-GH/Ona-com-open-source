@@ -23,6 +23,12 @@ const baseConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
   serverExternalPackages: ['@daytonaio/sdk', 'playwright', 'ws'],
+  // `src/libs/DB.ts` loads SQL migrations from ./migrations at request time via
+  // `path.join(process.cwd(), 'migrations')`, which the file tracer cannot see.
+  // Explicitly include them so auto-migration also works on Vercel/serverless.
+  outputFileTracingIncludes: {
+    '/**': ['./migrations/**'],
+  },
 };
 
 const nextIntlConfig = createNextIntlPlugin('./src/libs/I18n.ts')(baseConfig);

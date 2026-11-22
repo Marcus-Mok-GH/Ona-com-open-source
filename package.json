@@ -1,5 +1,5 @@
 {
-  "name": "next-js-boilerplate",
+  "name": "ona-com-open-source",
   "scripts": {
     "dev": "next dev --turbo -p 5000 -H 0.0.0.0",
     "build": "next build",
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@daytonaio/sdk": "^0.165.0",
+    "@neon/auth": "^0.8.2",
     "drizzle-orm": "^0.45.2",
     "geist": "^1.7.0",
     "highlight.js": "^11.11.1",

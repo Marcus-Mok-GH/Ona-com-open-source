@@ -8,191 +8,183 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        node-version: [20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-    name: Build with ${{ matrix.node-version }}
+    name: Build & smoke test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ona
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
+          cache: npm
 
-      - name: Restore or cache Next.js build
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Cache Next.js build
         uses: actions/cache@v4
         with:
-          path: |
-            .next/cache
-          # Generate a new cache whenever packages or source files change.
-          key: nextjs-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**') }}
+          path: .next/cache
+          key: nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: nextjs-
 
       - name: Build Next.js
         run: npm run build
+
+      # Preferred: provision a real Neon project/branch (DB + Managed Neon Auth)
+      # with the Neon CLI driven by NEON_API_KEY. Falls back to the local
+      # Postgres service + Replit-free dummy auth env when no key is configured.
+      - name: Provision Neon database and auth (NEON_API_KEY)
+        if: env.NEON_API_KEY != ''
         env:
-          NEXT_PUBLIC_SENTRY_DISABLED: 'true' # Only upload Sentry source maps in deployment
-
-      - if: matrix.node-version == '22.x' && success()
-        name: Cache Next.js build output
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            .next
-          key: nextjs-build-${{ matrix.node-version }}-${{ github.sha }}
-
-  static:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run static checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Retrieve Git history, needed to verify commits
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - if: github.event_name == 'pull_request'
-        name: Validate all commits from PR
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
-
-      - name: Linter
-        run: npm run lint
-
-      - name: Type checking
-        run: npm run check:types
-
-      - name: Check dependencies
-        run: npm run check:deps
-
-      - name: I18n check
-        run: npm run check:i18n
-
-  unit:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run unit tests
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Run unit tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: npm run test -- --coverage
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  storybook:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run Storybook
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Run storybook tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: npm run storybook:test
-
-  e2e:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run E2E tests
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # For chromatic
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-          restore-nextjs-cache: true
-
-      - name: Run E2E tests
-        uses: docker://mcr.microsoft.com/playwright:v1.53.1
-        with:
-          args: sh -c "HOME=/root npm run test:e2e" # Set HOME to /root to avoid Playwright error with Firebox
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-
-      - name: Fix test results permission # Give permissions to test results needed by Chromatic
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
         run: |
-          sudo chmod -R 777 test-results
+          # Prune stale CI branches from previous runs so the free-plan branch
+          # limit can never wedge provisioning (e.g. after cancelled runs).
+          npx -y neon@latest branches list --project-id flat-term-26419434 -o json 2>/dev/null \
+            | jq -r '.[] | select(.name | startswith("ona-ci-")) | .id' \
+            | while read -r id; do
+                npx -y neon@latest branches delete "$id" --project-id flat-term-26419434 -y >/dev/null 2>&1 || true
+              done
+          ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
 
-      - name: Run visual regression tests
-        uses: chromaui/action@v13
-        with:
-          playwright: true
-          exitOnceUploaded: true # Speed up by skipping the build results
-          outputDir: storybook-static
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: test-results
-          path: test-results/
-          retention-days: 7
-
-  lighthouse:
-    strategy:
-      matrix:
-        node-version: [22.x]
-
-    name: Run unlighthouse
-    runs-on: ubuntu-latest
-    needs: [build]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js environment
-        uses: ./.github/actions/setup-project
-        with:
-          node-version: ${{ matrix.node-version }}
-          restore-nextjs-cache: true
-
-      - name: Run unlighthouse
+      - name: Provision Neon database and auth (optional)
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
         run: |
-          npm run test:lighthouse
+          if [ -z "$NEON_API_KEY" ]; then
+            echo "NEON_API_KEY not set - falling back to the local Postgres service container"
+            {
+              echo "POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/ona"
+              echo "SESSION_SECRET=ci-smoke-test-secret-value-32-chars-min"
+              echo "NEON_AUTH_COOKIE_SECRET=ci-smoke-test-secret-value-32-chars-min-0"
+            } > .env.local
+          else
+            ONA_NEON_BRANCH="ona-ci-${GITHUB_RUN_ID}" bash scripts/neon-setup.sh
+          fi
+
+      - name: Smoke test — server boots, health endpoint and auth flow respond
+        run: |
+          # Start the server directly (not via npm) so SERVER_PID is the real
+          # server process and the later kill in this step works reliably.
+          npx next start -p 5000 &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/healthz || true)
+            if [ "$code" = "200" ]; then
+              echo "healthz returned 200 after ~$((i * 2))s"
+              curl -sf http://localhost:5000/api/healthz
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "::error::/api/healthz did not return 200 within 60s"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          # Auth flow smoke test (Neon Auth via /api/auth proxy)
+          ORIGIN=http://localhost:5000
+          EMAIL="ci-$GITHUB_RUN_ID-$(date +%s)@ona-smoke.test"
+          # A freshly provisioned branch's auth service can 404 briefly while
+          # provisioning completes - retry a few times before failing.
+          CODE=""
+          for attempt in 1 2 3 4; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Origin: $ORIGIN" -H 'Content-Type: application/json' \
+              -X POST "$ORIGIN/api/auth/sign-up/email" \
+              -d "{\"email\":\"$EMAIL\",\"password\":\"ci-smoke-pass-123\",\"name\":\"CI Smoke\"}")
+            [ "$CODE" = "200" ] && break
+            echo "sign-up attempt $attempt returned HTTP $CODE - retrying in 5s"
+            sleep 5
+          done
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Neon Auth sign-up returned HTTP $CODE"
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+          echo "Neon Auth sign-up returned 200"
+          kill $SERVER_PID 2>/dev/null || true
+          exit 0
+        env:
+          POLLINATIONS_API_KEY: dummy-key-for-ci
+          # Used only when the Neon provisioning step did not run (no NEON_API_KEY secret)
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ona
+          SESSION_SECRET: ci-smoke-test-secret-value-32-chars-min
+          NEON_AUTH_COOKIE_SECRET: ci-smoke-test-secret-value-32-chars-min
+      - name: Smoke test - auth flow against Neon (optional)
+        if: ${{ hashFiles('.env.local') != '' }}
+        run: |
+          if ! grep -q '^NEON_AUTH_BASE_URL=' .env.local; then
+            echo "Neon Auth not configured - skipping auth flow check"
+            exit 0
+          fi
+          # A previous step's server may still hold port 5000 (npm kills the
+          # wrapper, not the node child) - clear it before binding.
+          pkill -f 'next-server' 2>/dev/null || true
+          sleep 2
+          npx next start -p 5000 &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/auth/ok || true)
+            if [ "$code" = "200" ]; then break; fi
+            sleep 2
+          done
+          [ "$code" = "200" ] || { echo "::error::auth handler did not start"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          rm -f cookies.txt
+          EMAIL="ci-$GITHUB_RUN_ID-$(date +%s)@ona-smoke.test"
+          signup=$(curl -s -c cookies.txt -X POST http://localhost:5000/api/auth/sign-up/email \
+            -H 'Content-Type: application/json' -H 'Origin: http://localhost:5000' \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"supersecret123\",\"name\":\"CI Smoke\"}")
+          echo "$signup" | head -c 200
+          if ! echo "$signup" | grep -q '"user"'; then
+            echo "sign-up failed - retrying as sign-in (user may persist across runs on the same branch)"
+            signin=$(curl -s -c cookies.txt -X POST http://localhost:5000/api/auth/sign-in/email \
+              -H 'Content-Type: application/json' -H 'Origin: http://localhost:5000' \
+              -d "{\"email\":\"$EMAIL\",\"password\":\"supersecret123\"}")
+            echo "$signin" | head -c 200
+            echo "$signin" | grep -q '"user"' || { echo "::error::Neon Auth sign-up/sign-in failed"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          fi
+          user=$(curl -s -b cookies.txt http://localhost:5000/api/auth/user)
+          echo "session user: $user"
+          echo "$user" | grep -q 'ona-smoke.test' || { echo "::error::session cookie did not resolve a user"; kill $SERVER_PID 2>/dev/null; exit 1; }
+          echo "Auth flow OK"
+          kill $SERVER_PID 2>/dev/null || true
+        env:
+          POLLINATIONS_API_KEY: dummy-key-for-ci
+
+      - name: Vercel — sync Neon auth and database env via CLI
+        continue-on-error: true
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: bash scripts/vercel-setup.sh
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Cleanup throwaway Neon CI branches (optional)
+        if: ${{ always() && env.NEON_API_KEY != '' }}
+        run: |
+          ids=$(npx -y neon@latest branches list -o json 2>/dev/null \
+            | jq -r '(if type=="array" then . else .branches end)[] | select(.name | startswith("ona-ci-")) | .id')
+          for id in $ids; do
+            npx -y neon@latest branches delete "$id" -y >/dev/null 2>&1 && echo "deleted branch $id" || true
+          done

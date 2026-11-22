@@ -42,7 +42,12 @@ const createBuildTimeDb = () => {
 async function connectWithRetry(): Promise<NodePgDatabase<typeof schema>> {
   let lastError: Error | undefined;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  // During a production build (e.g. `next build` on CI/Vercel), the database is
+  // often unreachable. Don't burn minutes on retries — try once and let the
+  // caller fall back to the build-time proxy.
+  const maxAttempts = isNextProductionBuild ? 1 : MAX_RETRIES;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       if (!databaseUrl) {
         throw new Error('No database connection string is configured. Add POSTGRES_URL, POSTGRES_PRISMA_URL, POSTGRES_URL_NON_POOLING, POSTGRES_DATABASE_URL, or DATABASE_URL before using database-backed routes.');
@@ -61,13 +66,13 @@ async function connectWithRetry(): Promise<NodePgDatabase<typeof schema>> {
       // Verify connection by executing a test query
       await db.execute('SELECT 1');
 
-      logger.info(`Database connection established (attempt ${attempt}/${MAX_RETRIES})`);
+      logger.info(`Database connection established (attempt ${attempt}/${maxAttempts})`);
       return db;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
-      const isLastAttempt = attempt === MAX_RETRIES;
+      const isLastAttempt = attempt === maxAttempts;
       
-      logger.warn(`Database connection attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);
+      logger.warn(`Database connection attempt ${attempt}/${maxAttempts} failed:`, lastError.message);
       
       if (!isLastAttempt) {
         const delay = calculateBackoff(attempt);
@@ -77,8 +82,8 @@ async function connectWithRetry(): Promise<NodePgDatabase<typeof schema>> {
     }
   }
 
-  const finalError = lastError ?? new Error('Failed to connect to database after maximum retries');
-  logger.error('Database connection failed permanently after', MAX_RETRIES, 'attempts');
+  const finalError = lastError ?? new Error(`Failed to connect to database after ${maxAttempts} attempt(s)`);
+  logger.error('Database connection failed permanently after', maxAttempts, 'attempt(s)');
   throw finalError;
 }
 
@@ -105,7 +110,21 @@ const createDbConnection = async (): Promise<NodePgDatabase<typeof schema>> => {
     return createBuildTimeDb();
   }
 
-  const db = await connectWithRetry();
+  let db: NodePgDatabase<typeof schema>;
+
+  try {
+    db = await connectWithRetry();
+  } catch (error) {
+    if (isNextProductionBuild) {
+      // A build should not hard-fail just because the database is unreachable
+      // (e.g. Vercel builds with IP-restricted databases). Routes that need the
+      // database are dynamic and will connect at request time instead.
+      logger.warn('Skipping database initialization during production build:', error instanceof Error ? error.message : error);
+      return createBuildTimeDb();
+    }
+    throw error;
+  }
+
   await runMigrations(db);
   return db;
 };

@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/libs/DB';
-import { getSession } from '@/libs/ReplitAuth';
+import { getSession } from '@/libs/NeonAuth';
 import { apiKeyRateLimitsSchema, apiKeysSchema } from '@/models/Schema';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSession } from '@/libs/ReplitAuth';
+import { getSession } from '@/libs/NeonAuth';
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
