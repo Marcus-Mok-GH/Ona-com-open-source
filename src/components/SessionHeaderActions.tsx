@@ -16,7 +16,11 @@ function localizedHref(path: string, locale: string) {
 export function SessionHeaderActions({ locale }: Props) {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (!isLoading && isAuthenticated) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (isAuthenticated) {
     return (
       <>
         <Link

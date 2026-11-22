@@ -5,6 +5,7 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+import { AuthStateSync } from '@/components/AuthStateSync';
 import { ThemeInitializer } from '@/components/ThemeInitializer';
 import { routing } from '@/libs/I18nRouting';
 import '@/styles/global.css';
@@ -59,6 +60,7 @@ export default async function RootLayout(props: {
   return (
     <html lang={locale} className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <body className="font-sans" suppressHydrationWarning>
+        <AuthStateSync />
         <ThemeInitializer />
         <NextIntlClientProvider>{props.children}</NextIntlClientProvider>
       </body>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { apiFetch } from '@/libs/auth-client';
 import { copyTextToClipboard } from '@/utils/browserCompat';
 
 const GH_ICON = (
@@ -32,7 +33,7 @@ export function GitHubConnect() {
 
   const checkConnection = useCallback(async () => {
     try {
-      const res = await fetch('/api/github/status');
+      const res = await apiFetch('/api/github/status');
       if (!res.ok) { setStatus({ type: 'idle' }); return; }
       const data = await res.json() as { configured: boolean; connected: boolean; user?: GitHubUser };
       if (!data.configured) { setStatus({ type: 'idle' }); return; }
@@ -57,7 +58,7 @@ export function GitHubConnect() {
   async function startDeviceFlow() {
     setStatus({ type: 'loading' });
     try {
-      const res = await fetch('/api/github/device/start', { method: 'POST' });
+      const res = await apiFetch('/api/github/device/start', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to start');
       const data = await res.json() as {
         device_code: string;
@@ -84,7 +85,7 @@ export function GitHubConnect() {
 
   async function doPoll(deviceCode: string, interval: number) {
     try {
-      const res = await fetch('/api/github/device/poll', {
+      const res = await apiFetch('/api/github/device/poll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_code: deviceCode }),
@@ -108,7 +109,7 @@ export function GitHubConnect() {
 
   async function disconnect() {
     stopPolling();
-    await fetch('/api/github/device/disconnect', { method: 'POST' });
+    await apiFetch('/api/github/device/disconnect', { method: 'POST' });
     setStatus({ type: 'idle' });
   }
 

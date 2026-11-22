@@ -1,35 +1,58 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { getSafeBrowserReturnPath, isMobileBrowser, navigateTopLevel } from '@/utils/browserCompat';
 import { AppConfig } from '@/utils/AppConfig';
+import { createAuthStore, LOADING_SNAPSHOT } from './auth-store';
 
-export type SessionUser = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  profileImageUrl: string | null;
-};
+export type { SessionUser } from './auth-store';
+
+export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, { credentials: 'include', ...init });
+}
+
+const authStore = createAuthStore(apiFetch);
+
+export function refreshAuth(): Promise<void> {
+  return authStore.refresh();
+}
+
+let initialized = false;
+
+function subscribe(listener: () => void): () => void {
+  const unsubscribe = authStore.subscribe(listener);
+
+  if (!initialized) {
+    initialized = true;
+    void refreshAuth();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', refreshAuth);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') void refreshAuth();
+      });
+    }
+  }
+
+  return unsubscribe;
+}
+
+function getSnapshot() {
+  return authStore.getSnapshot();
+}
+
+function getServerSnapshot() {
+  return LOADING_SNAPSHOT;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/auth/user', { credentials: 'include' })
-      .then(res => (res.ok ? res.json() : null))
-      .then((data: SessionUser | null) => {
-        setUser(data);
-      })
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
+    user: state.user,
+    isLoading: state.isLoading,
+    isAuthenticated: !!state.user,
+    refresh: refreshAuth,
   };
 }
 
@@ -59,7 +82,8 @@ export function signIn(returnTo?: string) {
 export function signOut() {
   const locale = getLocaleFromPath(window.location.pathname);
   const homePath = locale === AppConfig.defaultLocale ? '/' : `/${locale}`;
-  fetch('/api/auth/sign-out', {
+  authStore.beginSignOut();
+  apiFetch('/api/auth/sign-out', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',
