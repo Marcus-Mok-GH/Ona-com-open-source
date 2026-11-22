@@ -1058,7 +1058,6 @@ const chatRequestSchema = z.object({
   assistantMessageId: z.string().uuid().optional(),
   jobId: z.string().uuid().optional(),
   model: z.string().optional(),
-  runAsUserId: z.string().optional(),
 });
 
 const PLAN_MODE_CONTEXT = `\n\n---\n\n## PLAN MODE (NO EDITS)\n\nYou are in plan mode.\n\nHard rules:\n- Do not edit code or files yourself.\n- Do not call editing tools.\n- Ask concise, relevant clarifying questions when requirements are ambiguous.\n- Produce a high-level execution plan in markdown suitable for a file named plan.md.\n- You MUST call \`call_overseer\` to deeply review your proposed plan before finalizing.\n- Overseer returns one of: \`BAD + [REASONING]\`, \`OK + [REASONING]\`, \`GOOD + [REASONING]\`.\n- If result is BAD, revise the plan and run Overseer again.\n- \`OK\` is enough to proceed. \`GOOD\` is encouraged when feasible.\n\nPlan quality requirements:\n- Include: objective, assumptions, open questions, proposed approach, risks, and validation strategy.\n- Keep it implementation-guiding but high-level (no giant code dumps).\n- Update and refine the plan as new user answers arrive.\n`;
@@ -1135,62 +1134,40 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      const internalHeartbeatSecret = process.env.SUPER_AGENT_HEARTBEAT_SECRET;
-      const internalHeartbeatHeader = req.headers.get('x-ona-heartbeat-secret');
-      const isInternalHeartbeatRequest = Boolean(
-        internalHeartbeatSecret
-          && internalHeartbeatHeader
-          && internalHeartbeatHeader === internalHeartbeatSecret,
-      );
-
-      let billedUserId: string;
-      let authSource: 'session' | 'api_key' | 'internal';
-
-      if (isInternalHeartbeatRequest) {
-        if (!parsed.data.runAsUserId) {
-          emit({ type: 'error', message: 'Internal heartbeat requests must include runAsUserId.', status: 400 });
-          close();
-          return;
-        }
-        billedUserId = parsed.data.runAsUserId;
-        authSource = 'internal';
-      } else {
-        const auth = await getRequestAuth(req);
-        if (isAuthFailure(auth)) {
-          emit({
-            type: 'error',
-            message: auth.message,
-            status: auth.status,
-            retryAfterSeconds: auth.retryAfterSeconds,
-            resetAt: auth.resetAt?.toISOString(),
-          });
-          close();
-          return;
-        }
-        if (!auth) {
-          emit({ type: 'error', message: 'Authentication required.', status: 401 });
-          close();
-          return;
-        }
-
-        const scopeFailure = requireApiKeyScope(auth, 'task_running');
-        if (scopeFailure) {
-          emit({
-            type: 'error',
-            message: scopeFailure.message,
-            status: scopeFailure.status,
-          });
-          close();
-          return;
-        }
-
-        billedUserId = auth.userId;
-        authSource = auth.source;
+      const auth = await getRequestAuth(req);
+      if (isAuthFailure(auth)) {
+        emit({
+          type: 'error',
+          message: auth.message,
+          status: auth.status,
+          retryAfterSeconds: auth.retryAfterSeconds,
+          resetAt: auth.resetAt?.toISOString(),
+        });
+        close();
+        return;
+      }
+      if (!auth) {
+        emit({ type: 'error', message: 'Authentication required.', status: 401 });
+        close();
+        return;
       }
 
+      const scopeFailure = requireApiKeyScope(auth, 'task_running');
+      if (scopeFailure) {
+        emit({
+          type: 'error',
+          message: scopeFailure.message,
+          status: scopeFailure.status,
+        });
+        close();
+        return;
+      }
+
+      const billedUserId: string = auth.userId;
+      const authSource: 'session' | 'api_key' = auth.source;
+
       // Pre-flight balance check — reject with 402 Payment Required when the
-      // caller has exhausted their credits. Applies uniformly to session,
-      // API-key, and internal heartbeat callers.
+      // caller has exhausted their credits.
       const currentBalance = await getUserCredits(billedUserId);
       if (currentBalance <= 0) {
         emit({
