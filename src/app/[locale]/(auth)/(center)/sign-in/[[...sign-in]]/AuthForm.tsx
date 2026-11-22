@@ -59,10 +59,12 @@ function VerifyEmailStep({
   email,
   returnTo,
   onBack,
+  reusedCode = false,
 }: {
   email: string;
   returnTo: string;
   onBack: () => void;
+  reusedCode?: boolean;
 }) {
   const [verifyState, submitVerify, verifyPending] = useActionState<AuthFormState, FormData>(
     verifyEmailCode,
@@ -100,8 +102,13 @@ function VerifyEmailStep({
           Check your inbox
         </h1>
         <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-          We sent a 6-digit code to <span className="font-medium text-[var(--text-primary)]">{maskedEmail}</span>.
-          Enter it below to verify your account.
+          {reusedCode
+            ? 'We already sent a 6-digit code to '
+            : 'We sent a 6-digit code to '}
+          <span className="font-medium text-[var(--text-primary)]">{maskedEmail}</span>.
+          {' '}{reusedCode
+            ? 'It should still be in your inbox — enter it below, or resend if you need a new one.'
+            : 'Enter it below to verify your account.'}
         </p>
       </div>
 
@@ -203,6 +210,7 @@ export function AuthForm({
         email={state.email}
         returnTo={returnTo}
         onBack={() => setMode('sign-in')}
+        reusedCode={state.reusedCode === true}
       />
     );
   }
