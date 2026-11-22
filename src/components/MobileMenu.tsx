@@ -25,7 +25,7 @@ export function MobileMenu() {
   const params = useParams<{ locale?: string }>();
   const locale = AppConfig.locales.includes(params.locale || '') ? params.locale! : AppConfig.defaultLocale;
   const loginHref = getLoginHref(locale);
-  const appHref = AppConfig.defaultLocale === locale ? '/app' : `/${locale}/app`;
+  const appHref = AppConfig.defaultLocale === locale ? '/task' : `/${locale}/task`;
 
   return (
     <div className="md:hidden">
