@@ -2,8 +2,8 @@ import { checkPollinationsHealth } from '@/libs/Pollinations';
 
 import { getDb } from '@/libs/DB';
 import { logger } from '@/libs/Logger';
-import { agentJobsSchema, conversationSuperAgentsSchema } from '@/models/Schema';
-import { eq, and, lte } from 'drizzle-orm';
+import { agentJobsSchema } from '@/models/Schema';
+import { eq } from 'drizzle-orm';
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -16,12 +16,7 @@ export type HealthCheckResult = {
       responseTime: number;
       message?: string;
     };
-    superAgent: {
-      status: HealthStatus;
-      activeJobs: number;
-      dueHeartbeats: number;
-      message?: string;
-    };
+
     externalApis: {
       pollinations: { status: HealthStatus; message?: string };
       orgo: { status: HealthStatus; message?: string };
@@ -54,39 +49,7 @@ async function checkDatabase(): Promise<{ status: HealthStatus; responseTime: nu
   }
 }
 
-async function checkSuperAgent(): Promise<{ status: HealthStatus; activeJobs: number; dueHeartbeats: number; message?: string }> {
-  try {
-    const db = await getDb();
-    const now = new Date();
-    const [activeJobsResult, dueHeartbeatsResult] = await Promise.all([
-      db.select().from(agentJobsSchema).where(eq(agentJobsSchema.status, 'running')),
-      db.select()
-        .from(conversationSuperAgentsSchema)
-        .where(and(
-          eq(conversationSuperAgentsSchema.enabled, true),
-          lte(conversationSuperAgentsSchema.nextHeartbeatAt, now)
-        )),
-    ]);
 
-    const activeJobs = activeJobsResult.length;
-    const dueHeartbeats = dueHeartbeatsResult.length;
-
-    let status: HealthStatus = 'healthy';
-    if (activeJobs > 10 || dueHeartbeats > 50) {
-      status = 'degraded';
-    }
-
-    return { status, activeJobs, dueHeartbeats };
-  } catch (error) {
-    logger.error('SuperAgent health check failed:', error);
-    return { 
-      status: 'unhealthy', 
-      activeJobs: 0, 
-      dueHeartbeats: 0,
-      message: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
 
 async function checkPollinations(): Promise<{ status: HealthStatus; message?: string }> {
   try {
@@ -121,9 +84,8 @@ async function checkOrgo(): Promise<{ status: HealthStatus; message?: string }> 
 }
 
 export async function performHealthCheck(): Promise<HealthCheckResult> {
-  const [dbCheck, superAgentCheck, pollinationsCheck, orgoCheck] = await Promise.all([
+  const [dbCheck, pollinationsCheck, orgoCheck] = await Promise.all([
     checkDatabase(),
-    checkSuperAgent(),
     checkPollinations(),
     checkOrgo(),
   ]);
@@ -131,8 +93,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   let overallStatus: HealthStatus = 'healthy';
   if (dbCheck.status === 'unhealthy') {
     overallStatus = 'unhealthy';
-  } else if (dbCheck.status === 'degraded' || superAgentCheck.status === 'degraded' || 
-             pollinationsCheck.status === 'degraded' || orgoCheck.status === 'degraded') {
+  } else if (dbCheck.status === 'degraded' || pollinationsCheck.status === 'degraded' || orgoCheck.status === 'degraded') {
     overallStatus = 'degraded';
   }
 
@@ -141,7 +102,6 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
     timestamp: new Date().toISOString(),
     checks: {
       database: dbCheck,
-      superAgent: superAgentCheck,
       externalApis: {
         pollinations: pollinationsCheck,
         orgo: orgoCheck,

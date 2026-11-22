@@ -20,7 +20,6 @@ export async function GET(_request: NextRequest) {
         timestamp: new Date().toISOString(),
         checks: {
           database: health.checks.database.status,
-          superAgent: health.checks.superAgent.status,
         },
       }, 
       { 
