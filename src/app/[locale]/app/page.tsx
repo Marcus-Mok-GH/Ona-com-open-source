@@ -1550,55 +1550,6 @@ export default function AppPage() {
     setRenameValue('');
   }
 
-  // How many times the pre-chat bookkeeping writes are attempted, and the base
-  // delay between attempts.
-  const MAX_BOOTSTRAP_RETRIES = 3;
-  const BOOTSTRAP_RETRY_DELAY_MS = 600;
-
-  /**
-   * Writes JSON to `url`, retrying on 5xx and network errors.
-   *
-   * The first request to a freshly woken serverless instance can fail while the
-   * database connection is still being established. These writes are the
-   * bookkeeping that must land before /api/chat runs: creating the conversation
-   * row and saving the user's message. When they were fire-and-forget with an
-   * empty catch, the chat request arrived with nothing to attach to and the
-   * turn silently vanished. A definite 4xx is not retried.
-   */
-  async function postJsonWithRetry(url: string, body: unknown, attempts = MAX_BOOTSTRAP_RETRIES): Promise<boolean> {
-    for (let attempt = 1; attempt <= attempts; attempt++) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (res.ok) return true;
-        if (res.status < 500) return false;
-      } catch {}
-      if (attempt < attempts) {
-        await new Promise(resolve => setTimeout(resolve, BOOTSTRAP_RETRY_DELAY_MS * attempt));
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Shows `message` on the trailing assistant bubble that is still waiting for
-   * a reply, so a failed send explains itself instead of hanging silently.
-   */
-  function pushSystemNotice(message: string) {
-    if (!activeId) return;
-    setConversations(prev => prev.map(c => {
-      if (c.id !== activeId) return c;
-      const last = c.messages[c.messages.length - 1];
-      if (!last || last.role !== 'assistant') return c;
-      return { ...c, messages: [...c.messages.slice(0, -1), { ...last, content: message }] };
-    }));
-    setLoading(false);
-    stopBackgroundPoll(activeId);
-  }
-
   const send = useCallback(async (text: string, imageDataUrl?: string) => {
     const trimmed = text.trim();
     if ((!trimmed && !imageDataUrl) || loading || !activeId) return;
@@ -1658,37 +1609,33 @@ export default function AppPage() {
     const convId = activeId;
     const convTitle = isFirstMessage ? title : currentConv.title;
     const sessionId = sessionIdRef.current;
-    if (syncedIds.current.has(convId)) {
-      // Only the first message can still change the title; later sends need no
-      // bookkeeping, and a failed rename must not cost the user their turn.
-      if (isFirstMessage) {
-        await postJsonWithRetry(`/api/conversations/${convId}`, { title: convTitle });
-      }
-    } else {
-      const bootstrapped = await postJsonWithRetry('/api/conversations', {
-        id: convId,
-        title: convTitle,
-        sessionId,
-      });
-      if (!bootstrapped) {
-        pushSystemNotice('Could not reach the server to start this task. Please send it again.');
-        return;
-      }
-      syncedIds.current.add(convId);
+    if (!syncedIds.current.has(convId)) {
+      try {
+        await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: convId, title: convTitle, sessionId }),
+        });
+        syncedIds.current.add(convId);
+      } catch {}
+    } else if (isFirstMessage) {
+      try {
+        await fetch(`/api/conversations/${convId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: convTitle }),
+        });
+      } catch {}
     }
 
-    // Save the user message so a reload or a background poll can rebuild the
-    // turn. Failing here used to be invisible and left the request with no
-    // persisted user message to respond to.
-    const userSaved = await postJsonWithRetry(`/api/conversations/${convId}/messages`, {
-      messageId: userMsg.id,
-      role: 'user',
-      content: userMsg.content,
-    });
-    if (!userSaved) {
-      pushSystemNotice('Could not save your message on the server. Please send it again.');
-      return;
-    }
+    // Save user message
+    try {
+      await fetch(`/api/conversations/${convId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: userMsg.id, role: 'user', content: userMsg.content }),
+      });
+    } catch {}
 
     // Tracks which assistant message is being filled with deltas
     let currentAssistantId = assistantId;
