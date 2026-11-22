@@ -92,6 +92,13 @@
       "when": 1777000000000,
       "tag": "0012_add_opencode_session_id",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777100000000,
+      "tag": "0013_drop_super_agents",
+      "breakpoints": true
     }
   ]
 }
