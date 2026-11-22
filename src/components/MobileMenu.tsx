@@ -8,10 +8,8 @@ import { AppConfig } from '@/utils/AppConfig';
 const navLinks = [
   { label: 'Platform', href: '/about/' },
   { label: 'Use cases', href: '/portfolio/' },
-  { label: 'Resources', href: '/counter/' },
-  { label: 'Blog', href: '/about/' },
-  { label: 'Docs', href: '/about/' },
-  { label: 'Pricing', href: '/about/' },
+  { label: 'Blog', href: '/learn/' },
+  { label: 'Customers', href: '/customer-stories/' },
 ];
 
 function getLoginHref(locale: string) {

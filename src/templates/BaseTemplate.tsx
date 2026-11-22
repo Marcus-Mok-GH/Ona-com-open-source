@@ -3,26 +3,63 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { MobileMenu } from '@/components/MobileMenu';
 import { AppConfig } from '@/utils/AppConfig';
 
+const fallbackHref = '/about/';
+
 const footerLinks = [
   {
     heading: 'Platform',
-    links: ['Background agents', 'Automations', 'Environments', 'Integrations', 'Governance', 'Pricing'],
+    links: [
+      { label: 'Background agents', href: '/learn/agents' },
+      { label: 'Automations', href: '/learn/automations' },
+      { label: 'Environments', href: '/learn/environments' },
+      { label: 'Integrations', href: fallbackHref },
+      { label: 'Governance', href: '/learn/governance' },
+      { label: 'Pricing', href: '/demo/' },
+    ],
   },
   {
     heading: 'Use cases',
-    links: ['AI code review', 'Backlog tickets', 'Bug triage', 'Code migration', 'CVE remediation', 'Docs drift'],
+    links: [
+      { label: 'AI code review', href: '/learn/code-review' },
+      { label: 'Backlog tickets', href: '/learn/backlog-automation' },
+      { label: 'Bug triage', href: '/portfolio/incident-triage' },
+      { label: 'Code migration', href: '/learn/code-migration' },
+      { label: 'CVE remediation', href: '/learn/cve-remediation' },
+      { label: 'Docs drift', href: '/learn/maintenance-agents' },
+    ],
   },
   {
     heading: 'Compare',
-    links: ['Claude Code', 'Cursor', 'GitHub Copilot', 'Devin', 'Codex', 'Factory'],
+    links: [
+      { label: 'Claude Code', href: fallbackHref },
+      { label: 'Cursor', href: fallbackHref },
+      { label: 'GitHub Copilot', href: fallbackHref },
+      { label: 'Devin', href: fallbackHref },
+      { label: 'Codex', href: fallbackHref },
+      { label: 'Factory', href: fallbackHref },
+    ],
   },
   {
     heading: 'Resources',
-    links: ['Blog', 'Docs', 'Changelog', 'Events', 'Newsletter', 'Templates', 'Reports', 'Skills'],
+    links: [
+      { label: 'Blog', href: '/learn/' },
+      { label: 'Docs', href: '/learn/' },
+      { label: 'Changelog', href: fallbackHref },
+      { label: 'Events', href: fallbackHref },
+      { label: 'Newsletter', href: fallbackHref },
+      { label: 'Templates', href: fallbackHref },
+      { label: 'Reports', href: fallbackHref },
+      { label: 'Skills', href: fallbackHref },
+    ],
   },
   {
     heading: 'Company',
-    links: ['About', 'Careers', 'Media', 'Contact'],
+    links: [
+      { label: 'About', href: '/about/' },
+      { label: 'Careers', href: fallbackHref },
+      { label: 'Media', href: fallbackHref },
+      { label: 'Contact', href: '/demo/' },
+    ],
   },
 ];
 
@@ -76,12 +113,12 @@ export const BaseTemplate = (props: {
                 </p>
                 <ul className="space-y-2">
                   {col.links.map(link => (
-                    <li key={link}>
+                    <li key={link.label}>
                       <Link
-                        href="/about/"
+                        href={link.href}
                         className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                       >
-                        {link}
+                        {link.label}
                       </Link>
                     </li>
                   ))}

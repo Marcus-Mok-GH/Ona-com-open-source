@@ -25,18 +25,13 @@ export default async function Layout(props: {
             </Link>
           </li>
           <li>
-            <Link href="/about/" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
-              Models
-            </Link>
-          </li>
-          <li>
-            <Link href="/about/" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
+            <Link href="/learn/" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
               Blog
             </Link>
           </li>
           <li>
-            <Link href="/about/" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
-              Pricing
+            <Link href="/customer-stories/" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
+              Customers
             </Link>
           </li>
         </>
