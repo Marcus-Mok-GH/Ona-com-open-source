@@ -18,10 +18,25 @@ const baseConfig: NextConfig = {
     ...(process.env.REPLIT_DEV_DOMAIN ? [process.env.REPLIT_DEV_DOMAIN] : []),
   ],
   poweredByHeader: false,
+  // Legacy /app URLs -> /task. Conversation IDs are unchanged.
+  // Old links used either ?c=<id> (chat page) or ?conversationId=<id> (dashboard);
+  // both end up as /task?c=<id>. Other query params are passed through by Next.
   async redirects() {
     return [
       { source: '/app/api-docs', destination: '/api-docs', permanent: true },
       { source: '/:locale(fr)/app/api-docs', destination: '/:locale/api-docs', permanent: true },
+      {
+        source: '/app',
+        has: [{ type: 'query', key: 'conversationId', value: '(?<id>.+)' }],
+        destination: '/task?c=:id',
+        permanent: true,
+      },
+      {
+        source: '/:locale(fr)/app',
+        has: [{ type: 'query', key: 'conversationId', value: '(?<id>.+)' }],
+        destination: '/:locale/task?c=:id',
+        permanent: true,
+      },
       { source: '/app', destination: '/task', permanent: true },
       { source: '/:locale(fr)/app', destination: '/:locale/task', permanent: true },
     ];
