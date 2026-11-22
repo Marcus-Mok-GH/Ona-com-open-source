@@ -24,7 +24,7 @@ export default async function DashboardLayout(props: {
           </li>
           <li>
             <Link
-              href="/app"
+              href="/task"
               className="rounded-[4px] px-3 py-1.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
             >
               Open App
