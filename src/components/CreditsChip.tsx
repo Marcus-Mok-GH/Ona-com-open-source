@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/libs/auth-client';
+import { apiFetch, useAuth } from '@/libs/auth-client';
 
 type CreditsUpdatedDetail = { credits: number };
 
@@ -31,7 +31,7 @@ export function CreditsChip() {
     let eventSeen = false;
     setLoading(true);
 
-    fetch('/api/credits/balance')
+    apiFetch('/api/credits/balance')
       .then(res => (res.ok ? res.json() : null))
       .then((data: { credits?: number } | null) => {
         if (cancelled) return;

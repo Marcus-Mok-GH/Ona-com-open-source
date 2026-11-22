@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { getSafeBrowserReturnPath, isMobileBrowser, navigateTopLevel } from '@/utils/browserCompat';
 import { AppConfig } from '@/utils/AppConfig';
 
@@ -12,24 +12,81 @@ export type SessionUser = {
   profileImageUrl: string | null;
 };
 
-export function useAuth() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+type AuthSnapshot = {
+  user: SessionUser | null;
+  isLoading: boolean;
+};
 
-  useEffect(() => {
-    fetch('/api/auth/user', { credentials: 'include' })
-      .then(res => (res.ok ? res.json() : null))
-      .then((data: SessionUser | null) => {
-        setUser(data);
-      })
-      .catch(() => setUser(null))
-      .finally(() => setIsLoading(false));
-  }, []);
+const UNAUTHORIZED_SNAPSHOT: AuthSnapshot = { user: null, isLoading: false };
+const LOADING_SNAPSHOT: AuthSnapshot = { user: null, isLoading: true };
+let snapshot: AuthSnapshot = LOADING_SNAPSHOT;
+const listeners = new Set<() => void>();
+let inFlight: Promise<void> | null = null;
+let initialized = false;
+
+function emit(next: AuthSnapshot) {
+  snapshot = next;
+  for (const listener of listeners) listener();
+}
+
+export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, { credentials: 'include', ...init });
+}
+
+export async function refreshAuth(): Promise<void> {
+  if (inFlight) return inFlight;
+
+  inFlight = apiFetch('/api/auth/user')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data: SessionUser | null) => {
+      emit({ user: data, isLoading: false });
+    })
+    .catch(() => {
+      emit(UNAUTHORIZED_SNAPSHOT);
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+
+  return inFlight;
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+
+  if (!initialized) {
+    initialized = true;
+    void refreshAuth();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', refreshAuth);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') void refreshAuth();
+      });
+    }
+  }
+
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot(): AuthSnapshot {
+  return snapshot;
+}
+
+function getServerSnapshot(): AuthSnapshot {
+  return LOADING_SNAPSHOT;
+}
+
+export function useAuth() {
+  const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
+    user: state.user,
+    isLoading: state.isLoading,
+    isAuthenticated: !!state.user,
+    refresh: refreshAuth,
   };
 }
 
@@ -59,7 +116,8 @@ export function signIn(returnTo?: string) {
 export function signOut() {
   const locale = getLocaleFromPath(window.location.pathname);
   const homePath = locale === AppConfig.defaultLocale ? '/' : `/${locale}`;
-  fetch('/api/auth/sign-out', {
+  emit(UNAUTHORIZED_SNAPSHOT);
+  apiFetch('/api/auth/sign-out', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',

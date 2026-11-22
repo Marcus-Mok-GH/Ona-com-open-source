@@ -67,8 +67,10 @@ export function MobileMenu() {
             </ul>
 
             <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
-              {isLoading || !isAuthenticated
-                ? (
+              {isLoading
+                ? null
+                : !isAuthenticated
+                  ? (
                     <a
                       href={loginHref}
                       target="_top"
