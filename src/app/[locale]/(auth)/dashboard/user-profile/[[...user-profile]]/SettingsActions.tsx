@@ -84,7 +84,7 @@ export function CreditsTopup() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch('/api/credits/balance')
+    fetch('/api/credits/balance', { credentials: 'include' })
       .then(res => (res.ok ? res.json() : null))
       .then((data: { credits?: number } | null) => {
         if (cancelled) return;
@@ -116,7 +116,7 @@ export function CreditsTopup() {
     setError(null);
     setSuccess(false);
     try {
-      const response = await fetch('/api/credits/topup', { method: 'POST' });
+      const response = await fetch('/api/credits/topup', { method: 'POST', credentials: 'include' });
       if (!response.ok) {
         const data = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(data?.error ?? 'Could not top up credits.');
@@ -205,7 +205,7 @@ export function ApiKeysPanel() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/settings/api-keys');
+      const response = await fetch('/api/settings/api-keys', { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Could not load API keys.');
       }
@@ -231,6 +231,7 @@ export function ApiKeysPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, scope }),
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Could not create API key.');
@@ -250,7 +251,7 @@ export function ApiKeysPanel() {
   async function revokeKey(id: string) {
     setError(null);
     try {
-      const response = await fetch(`/api/settings/api-keys/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/settings/api-keys/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!response.ok) {
         throw new Error('Could not revoke API key.');
       }
