@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getUser } from '@/libs/auth';
 import { AppConfig } from '@/utils/AppConfig';
 
-export default async function AppLayout(props: {
+export default async function ApiDocsLayout(props: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
@@ -12,13 +12,13 @@ export default async function AppLayout(props: {
 
   const user = await getUser();
   if (!user) {
-    const appPath = locale === AppConfig.defaultLocale ? '/app' : `/${locale}/app`;
+    const docsPath = locale === AppConfig.defaultLocale ? '/api-docs' : `/${locale}/api-docs`;
     const signInPath = locale === AppConfig.defaultLocale ? '/sign-in' : `/${locale}/sign-in`;
-    redirect(`${signInPath}?returnTo=${encodeURIComponent(appPath)}`);
+    redirect(`${signInPath}?returnTo=${encodeURIComponent(docsPath)}`);
   }
 
   return (
-    <div className="h-dvh bg-[var(--bg)]">
+    <div className="min-h-dvh bg-[var(--bg)]">
       {props.children}
     </div>
   );
