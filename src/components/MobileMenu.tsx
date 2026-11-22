@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { useAuth } from '@/libs/auth-client';
 import { AppConfig } from '@/utils/AppConfig';
 
 const navLinks = [
@@ -20,9 +21,11 @@ function getLoginHref(locale: string) {
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
   const params = useParams<{ locale?: string }>();
   const locale = AppConfig.locales.includes(params.locale || '') ? params.locale! : AppConfig.defaultLocale;
   const loginHref = getLoginHref(locale);
+  const appHref = AppConfig.defaultLocale === locale ? '/app' : `/${locale}/app`;
 
   return (
     <div className="md:hidden">
@@ -64,15 +67,27 @@ export function MobileMenu() {
             </ul>
 
             <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
-              <a
-                href={loginHref}
-                target="_top"
-                rel="noreferrer"
-                onClick={() => setOpen(false)}
-                className="rounded-lg bg-[var(--text-primary)] px-3 py-2.5 text-center text-base font-medium text-[var(--bg)] transition-opacity hover:opacity-80"
-              >
-                Get Started
-              </a>
+              {isLoading || !isAuthenticated
+                ? (
+                    <a
+                      href={loginHref}
+                      target="_top"
+                      rel="noreferrer"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg bg-[var(--text-primary)] px-3 py-2.5 text-center text-base font-medium text-[var(--bg)] transition-opacity hover:opacity-80"
+                    >
+                      Get Started
+                    </a>
+                  )
+                : (
+                    <Link
+                      href={appHref}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg bg-[var(--text-primary)] px-3 py-2.5 text-center text-base font-medium text-[var(--bg)] transition-opacity hover:opacity-80"
+                    >
+                      Open App
+                    </Link>
+                  )}
             </div>
           </nav>
         </div>
