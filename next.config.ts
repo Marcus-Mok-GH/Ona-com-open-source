@@ -18,6 +18,14 @@ const baseConfig: NextConfig = {
     ...(process.env.REPLIT_DEV_DOMAIN ? [process.env.REPLIT_DEV_DOMAIN] : []),
   ],
   poweredByHeader: false,
+  async redirects() {
+    return [
+      { source: '/app/api-docs', destination: '/api-docs', permanent: true },
+      { source: '/:locale(fr)/app/api-docs', destination: '/:locale/api-docs', permanent: true },
+      { source: '/app', destination: '/task', permanent: true },
+      { source: '/:locale(fr)/app', destination: '/:locale/task', permanent: true },
+    ];
+  },
   reactStrictMode: true,
   images: {
     formats: ['image/avif', 'image/webp'],
