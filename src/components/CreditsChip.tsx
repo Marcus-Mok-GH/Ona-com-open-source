@@ -5,6 +5,8 @@ import { apiFetch, useAuth } from '@/libs/auth-client';
 
 type CreditsUpdatedDetail = { credits: number };
 
+type UserBalance = { userId: string; credits: number };
+
 function formatCredits(value: number): string {
   return new Intl.NumberFormat().format(value);
 }
@@ -17,16 +19,19 @@ function formatCredits(value: number): string {
  * event) so the value stays fresh during a live conversation.
  */
 export function CreditsChip() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [credits, setCredits] = useState<number | null>(null);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const userId = user?.id;
+  const [balance, setBalance] = useState<UserBalance | null>(null);
   const [loading, setLoading] = useState(false);
+  const credits = userId && balance?.userId === userId ? balance.credits : null;
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setCredits(null);
+    if (!isAuthenticated || !userId) {
+      setBalance(null);
       return;
     }
 
+    const activeUserId = userId;
     let cancelled = false;
     let eventSeen = false;
     setLoading(true);
@@ -39,7 +44,7 @@ export function CreditsChip() {
         // this fetch response — don't clobber it.
         if (eventSeen) return;
         if (data && typeof data.credits === 'number') {
-          setCredits(data.credits);
+          setBalance({ userId: activeUserId, credits: data.credits });
         }
       })
       .catch(() => {})
@@ -51,7 +56,7 @@ export function CreditsChip() {
       const detail = (event as CustomEvent<CreditsUpdatedDetail>).detail;
       if (detail && typeof detail.credits === 'number') {
         eventSeen = true;
-        setCredits(detail.credits);
+        setBalance({ userId: activeUserId, credits: detail.credits });
       }
     }
 
@@ -60,7 +65,7 @@ export function CreditsChip() {
       cancelled = true;
       window.removeEventListener('credits-updated', handleUpdate);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userId]);
 
   if (authLoading || !isAuthenticated) {
     return null;

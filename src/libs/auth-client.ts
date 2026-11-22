@@ -3,56 +3,24 @@
 import { useSyncExternalStore } from 'react';
 import { getSafeBrowserReturnPath, isMobileBrowser, navigateTopLevel } from '@/utils/browserCompat';
 import { AppConfig } from '@/utils/AppConfig';
+import { createAuthStore, LOADING_SNAPSHOT } from './auth-store';
 
-export type SessionUser = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  profileImageUrl: string | null;
-};
-
-type AuthSnapshot = {
-  user: SessionUser | null;
-  isLoading: boolean;
-};
-
-const UNAUTHORIZED_SNAPSHOT: AuthSnapshot = { user: null, isLoading: false };
-const LOADING_SNAPSHOT: AuthSnapshot = { user: null, isLoading: true };
-let snapshot: AuthSnapshot = LOADING_SNAPSHOT;
-const listeners = new Set<() => void>();
-let inFlight: Promise<void> | null = null;
-let initialized = false;
-
-function emit(next: AuthSnapshot) {
-  snapshot = next;
-  for (const listener of listeners) listener();
-}
+export type { SessionUser } from './auth-store';
 
 export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   return fetch(input, { credentials: 'include', ...init });
 }
 
-export async function refreshAuth(): Promise<void> {
-  if (inFlight) return inFlight;
+const authStore = createAuthStore(apiFetch);
 
-  inFlight = apiFetch('/api/auth/user')
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data: SessionUser | null) => {
-      emit({ user: data, isLoading: false });
-    })
-    .catch(() => {
-      emit(UNAUTHORIZED_SNAPSHOT);
-    })
-    .finally(() => {
-      inFlight = null;
-    });
-
-  return inFlight;
+export function refreshAuth(): Promise<void> {
+  return authStore.refresh();
 }
 
+let initialized = false;
+
 function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
+  const unsubscribe = authStore.subscribe(listener);
 
   if (!initialized) {
     initialized = true;
@@ -66,16 +34,14 @@ function subscribe(listener: () => void): () => void {
     }
   }
 
-  return () => {
-    listeners.delete(listener);
-  };
+  return unsubscribe;
 }
 
-function getSnapshot(): AuthSnapshot {
-  return snapshot;
+function getSnapshot() {
+  return authStore.getSnapshot();
 }
 
-function getServerSnapshot(): AuthSnapshot {
+function getServerSnapshot() {
   return LOADING_SNAPSHOT;
 }
 
@@ -116,7 +82,7 @@ export function signIn(returnTo?: string) {
 export function signOut() {
   const locale = getLocaleFromPath(window.location.pathname);
   const homePath = locale === AppConfig.defaultLocale ? '/' : `/${locale}`;
-  emit(UNAUTHORIZED_SNAPSHOT);
+  authStore.beginSignOut();
   apiFetch('/api/auth/sign-out', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
