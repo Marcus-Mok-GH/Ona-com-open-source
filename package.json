@@ -9,7 +9,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@daytonaio/sdk": "^0.165.0",
     "@neon/auth": "^0.8.2",
     "drizzle-orm": "^0.45.2",
     "geist": "^1.7.0",

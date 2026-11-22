@@ -10,7 +10,7 @@ import { getRequestAuth, isAuthFailure, requireApiKeyScope } from '@/libs/ApiKey
 import { deductCreditsForUsage, getUserCredits } from '@/libs/Credits';
 import { agentEventsSchema, agentJobsSchema, conversationsSchema, messagesSchema } from '@/models/Schema';
 import { getGitHubToken, githubToolDefinitions, runGitHubTool } from '@/libs/GitHub';
-import { daytonaToolDefinitions, isDaytonaTool, prebootSandbox, runDaytonaTool } from '@/libs/Daytona';
+import { orgoToolDefinitions, isOrgoTool, prebootSandbox, runOrgoTool } from '@/libs/Orgo';
 import { callLibrarianProToolDefinition, isCallLibrarianProTool, runLibrarianProSubagent } from '@/libs/LibrarianPro';
 import { callOracleToolDefinition, isCallOracleTool, runOracleSubagent } from '@/libs/Oracle';
 import { callOverseerToolDefinition, isCallOverseerTool, runOverseerSubagent } from '@/libs/Overseer';
@@ -274,7 +274,7 @@ Before writing code that uses any library, API, or framework you have not explic
 
 ### 5. Verify before reporting
 Before opening a PR or claiming a task is complete:
-- If the repo has a test suite or build command, run it in a Daytona sandbox on your branch.
+- If the repo has a test suite or build command, run it in a Orgo computer on your branch.
 - Fix any failures in the same branch before opening the PR.
 - Only report "done" when the work is verified.
 
@@ -386,7 +386,7 @@ For all other requests (no specific repo target), tell the user to connect their
 
 ---
 
-### Daytona sandbox — code execution & verification
+### Orgo computer — code execution & verification
 
 **Use for:** running tests, builds, linters, and scripts — any time you need proof that the code works before opening a PR.
 
@@ -406,7 +406,7 @@ For all other requests (no specific repo target), tell the user to connect their
 - Running different independent tasks at the same time to save wall-clock time.
 - Batch operations where each unit of work is self-contained and produces its own PR.
 
-**How it works:** Each task is assigned to a dedicated sub-agent with its own isolated Daytona sandbox. All agents run in parallel. Each agent has the full tool suite (GitHub, Daytona, Librarian, Oracle), creates a branch, opens a PR, and returns a structured result. You collect all results and present a fleet summary to the user.
+**How it works:** Each task is assigned to a dedicated sub-agent with its own isolated Orgo computer. All agents run in parallel. Each agent has the full tool suite (GitHub, Orgo, Librarian, Oracle), creates a branch, opens a PR, and returns a structured result. You collect all results and present a fleet summary to the user.
 
 **Do NOT use for:** sequential tasks where step B depends on output from step A — run those in the normal agent loop instead. Also do not split a single-file change into fleet tasks; use the normal loop.
 
@@ -499,7 +499,7 @@ For all other requests (no specific repo target), tell the user to connect their
 Before producing your final response or opening a PR, do a fast internal audit:
 1. **Evidence check**: Can every technical claim (file path, API call, version, flag, env var) be traced to a specific tool result in this session? If not, use a tool to verify it now.
 2. **Assumption check**: Did you write any code against an external library without calling \`call_librarian_pro\` first? If yes, call it now and adjust if needed.
-3. **Verification check**: Did you run the relevant tests or build in a Daytona sandbox? If not, and the repo has tests, do it now.
+3. **Verification check**: Did you run the relevant tests or build in a Orgo computer? If not, and the repo has tests, do it now.
 
 Only after passing this audit should you write the final summary and close the task.
 
@@ -665,7 +665,7 @@ function toolLabel(name: string, args: Record<string, unknown> = {}): string {
     case 'github_clone_repo':
       return repo() ? `Cloning ${repo()}` : 'Cloning repository';
 
-    // ── Daytona sandbox ───────────────────────────────────────────────────
+    // ── Orgo computer ───────────────────────────────────────────────────
     case 'sandbox_create': {
       const lang = s('language') || 'python';
       return `Creating ${lang} sandbox`;
@@ -1302,7 +1302,7 @@ export async function POST(req: NextRequest) {
 
       // Pre-boot the sandbox on the very first message so it's ready before the AI starts.
       const isFirstMessage = messages.length === 1;
-      if (isFirstMessage && process.env.DAYTONA_API_KEY && !isPlanMode) {
+      if (isFirstMessage && process.env.ORGO_API_KEY && !isPlanMode) {
         emit({ type: 'sandbox_booting' });
         if (jobId) await persistJobEvent(jobId, 'sandbox_booting', {});
         const booted = await prebootSandbox();
@@ -1315,7 +1315,7 @@ export async function POST(req: NextRequest) {
           conversation.splice(1, 0,
             {
               role: 'user',
-              content: `[System context] A Daytona sandbox has been pre-booted for this session. sandbox_id: ${booted.sandbox_id}, work_dir: ${booted.work_dir}. Use this sandbox_id directly for all sandbox_exec, sandbox_write_file, and other sandbox calls — do NOT call sandbox_create again.`,
+              content: `[System context] A Orgo computer has been pre-booted for this session. sandbox_id: ${booted.sandbox_id}, work_dir: ${booted.work_dir}. Use this sandbox_id directly for all sandbox_exec, sandbox_write_file, and other sandbox calls — do NOT call sandbox_create again.`,
             },
             {
               role: 'assistant',
@@ -1336,7 +1336,7 @@ export async function POST(req: NextRequest) {
         let noGhAssistantMsgId = assistantMessageId ?? crypto.randomUUID();
         let noGhAssistantText = '';
         const noGhRecentSigs: string[] = [];
-        const noGhTools = [...daytonaToolDefinitions, callLibrarianProToolDefinition, callOracleToolDefinition, callEditorToolDefinition];
+        const noGhTools = [...orgoToolDefinitions, callLibrarianProToolDefinition, callOracleToolDefinition, callEditorToolDefinition];
 
         for (;;) {
           let iterText = '';
@@ -1462,8 +1462,8 @@ export async function POST(req: NextRequest) {
                   : JSON.stringify(result);
                 emit({ type: 'editor_report', parentLabel, report: editorReport });
                 if (jobId) persistJobEvent(jobId, 'editor_report', { parentLabel, report: editorReport }).catch(() => {});
-              } else if (isDaytonaTool(toolName)) {
-                result = await runDaytonaTool(toolName, toolArgs);
+              } else if (isOrgoTool(toolName)) {
+                result = await runOrgoTool(toolName, toolArgs);
                 if (toolName === 'sandbox_create' && conversationId) {
                   const sandboxId = (result as Record<string, unknown>)?.sandbox_id;
                   if (typeof sandboxId === 'string') {
@@ -1568,7 +1568,7 @@ export async function POST(req: NextRequest) {
             messages: callMessages,
             tools: isPlanMode
               ? [callOverseerToolDefinition, ...ULTRAWORK_TOOLS]
-              : [...githubToolDefinitions.filter(t => !['github_upsert_file', 'github_delete_file'].includes(t.function.name)), ...daytonaToolDefinitions, callLibrarianProToolDefinition, callOracleToolDefinition, callEditorToolDefinition, callFleetToolDefinition, ...ULTRAWORK_TOOLS],
+              : [...githubToolDefinitions.filter(t => !['github_upsert_file', 'github_delete_file'].includes(t.function.name)), ...orgoToolDefinitions, callLibrarianProToolDefinition, callOracleToolDefinition, callEditorToolDefinition, callFleetToolDefinition, ...ULTRAWORK_TOOLS],
             tool_choice: 'auto',
             max_tokens: agentMaxTokens,
             temperature: agentTemperature,
@@ -1847,8 +1847,8 @@ export async function POST(req: NextRequest) {
                   if (jobId) persistJobEvent(jobId, 'fleet_dispatch_done', { parentLabel, results: fleetResults }).catch(() => {});
                   result = { fleet_results: fleetResults };
                 }
-              } else if (isDaytonaTool(toolName)) {
-                result = await runDaytonaTool(toolName, toolArgs);
+              } else if (isOrgoTool(toolName)) {
+                result = await runOrgoTool(toolName, toolArgs);
                 if (toolName === 'sandbox_create' && conversationId) {
                   const sandboxId = (result as Record<string, unknown>)?.sandbox_id;
                   if (typeof sandboxId === 'string') {

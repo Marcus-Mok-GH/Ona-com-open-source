@@ -1,6 +1,6 @@
 # ONA but OPEN SOURCE
 
-An open-source clone of the [Ona](https://ona.com) platform — a full-stack **AI background software engineering agent**. Users describe tasks in a chat UI, and an autonomous agent uses GitHub, Daytona sandboxes, a Librarian research subagent, an Oracle deep-reasoning subagent, and a Browser Use subagent to deliver changes end-to-end: **task in → pull request out**.
+An open-source clone of the [Ona](https://ona.com) platform — a full-stack **AI background software engineering agent**. Users describe tasks in a chat UI, and an autonomous agent uses GitHub, Orgo sandboxes, a Librarian research subagent, an Oracle deep-reasoning subagent, and a Browser Use subagent to deliver changes end-to-end: **task in → pull request out**.
 
 Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **Drizzle ORM** + **PostgreSQL** (Neon), deployed via Replit/Vercel.
 
@@ -9,7 +9,7 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 ## ✨ Key Features
 
 - **Autonomous Agent Loop (Ultrawork):** The AI plans with `todo_write`, tracks progress with `todo_read`, and must call `task_complete` to exit. Loop re-injection ensures tasks are fully completed.
-- **Daytona Sandboxes:** Isolated cloud development environments for safe code execution (`sandbox_create`, `sandbox_exec`, `sandbox_write_file`, `sandbox_read_file`, `sandbox_list_files`, `sandbox_delete`, `sandbox_git_clone`).
+- **Orgo Sandboxes:** Isolated cloud development environments for safe code execution (`sandbox_create`, `sandbox_exec`, `sandbox_write_file`, `sandbox_read_file`, `sandbox_list_files`, `sandbox_delete`, `sandbox_git_clone`).
 - **GitHub Integration:** Full GitHub API — repos, files, branches, commits, PRs, issues. Enforces branch + PR workflow (no direct pushes to default branch).
 - **Subagents:**
   - **Librarian** — Research subagent (up to 15 iterations). Tools: `scrape_page` (Firecrawl), `fetch_url`, `search_web` (DuckDuckGo), `npm_package`, `github_readme`.
@@ -23,7 +23,7 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 - **Streaming Chat UI:** SSE streaming, tool-step visualization, todo panel, @-mention file picker, image upload/paste, model selector, theme toggle.
 - **Internationalization (i18n):** Multi-language support (`en`, `fr`) powered by `next-intl` with Crowdin integration.
 - **Authentication:** Neon Auth (Managed Better Auth) + GitHub OAuth device flow for repository access.
-- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Pollinations AI, Daytona, and Super Agent status.
+- **Health Monitoring:** Built-in `/api/healthz` and `/api/readiness` endpoints checking database, Pollinations AI, Orgo, and Super Agent status.
 - **Resilience:** Circuit breaker, resilient API client, graceful shutdown, memory monitoring, and timeout utilities.
 
 ## 🛠️ Tech Stack
@@ -36,7 +36,7 @@ Built with **Next.js 15** (App Router) + **React 19** + **Tailwind CSS 4** + **D
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team/) |
 | **Database** | PostgreSQL (auto-migrates on startup) |
 | **AI Provider** | [Pollinations AI](https://pollinations.ai/) — MiniMax M3.1 Flash |
-| **Sandboxes** | [Daytona](https://daytona.io/) |
+| **Sandboxes** | [Orgo](https://orgo.ai/) |
 | **Auth** | Neon Auth (Managed Better Auth), GitHub OAuth device flow |
 | **Session** | [`iron-session`](https://github.com/vvo/iron-session) (7-day expiry, SameSite=Lax) |
 | **Research** | [Firecrawl](https://firecrawl.dev/), DuckDuckGo search |
@@ -104,7 +104,9 @@ NEON_AUTH_COOKIE_SECRET=your-32-plus-character-secret
 POLLINATIONS_API_KEY=your_pollinations_key
 
 # ── Sandboxes ──
-DAYTONA_API_KEY=your_daytona_key
+ORGO_API_KEY=your_orgo_key
+ORGO_WORKSPACE_ID=your_orgo_workspace_id
+# ORGO_API_URL=https://www.orgo.ai/api
 
 # ── Research / Browser ──
 FIRECRAWL_API_KEY=your_firecrawl_key
@@ -181,7 +183,7 @@ The application runs on **port 5000**, host **0.0.0.0** (required for Replit pre
 │   │   │   ├── credits/       # Credit balance
 │   │   │   ├── github/        # GitHub OAuth device flow
 │   │   │   ├── jobs/          # Background job SSE event stream
-│   │   │   ├── sandbox/       # Daytona sandbox file listing
+│   │   │   ├── sandbox/       # Orgo sandbox file listing
 │   │   │   ├── settings/      # Per-user API key management
 │   │   │   ├── auth/          # Current user info
 │   │   │   ├── healthz/       # Health check endpoint
@@ -191,7 +193,7 @@ The application runs on **port 5000**, host **0.0.0.0** (required for Replit pre
 │   │   └── sitemap.ts
 │   ├── components/      # Shared React components (analytics, auth, theme, etc.)
 │   ├── libs/            # Core libraries & services
-│   │   ├── Daytona.ts   # Sandbox tools
+│   │   ├── Orgo.ts   # Sandbox tools
 │   │   ├── GitHub.ts    # GitHub API & tool definitions
 │   │   ├── Librarian.ts # Research subagent
 │   │   ├── LibrarianPro.ts # Unified research + browser subagent

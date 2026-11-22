@@ -1,6 +1,6 @@
 import { githubToolDefinitions, runGitHubTool } from '@/libs/GitHub';
 import { POLLINATIONS_API_URL, pollinationsAuthHeaders, pollinationsChat } from '@/libs/Pollinations';
-import { daytonaToolDefinitions, isDaytonaTool, prebootSandbox, runDaytonaTool } from '@/libs/Daytona';
+import { orgoToolDefinitions, isOrgoTool, prebootSandbox, runOrgoTool } from '@/libs/Orgo';
 import { callLibrarianProToolDefinition, isCallLibrarianProTool, runLibrarianProSubagent } from '@/libs/LibrarianPro';
 import { callOracleToolDefinition, isCallOracleTool, runOracleSubagent } from '@/libs/Oracle';
 import { logger } from '@/libs/Logger';
@@ -70,7 +70,7 @@ Complete the assigned task end-to-end. If repository work is involved, create a 
 
 ## Operating rules
 - Create a branch named \`ona/<short-slug>\` for every repo change.
-- Run tests or builds in a Daytona sandbox before opening a PR.
+- Run tests or builds in a Orgo computer before opening a PR.
 - Call task_complete as soon as the task is done (or if genuinely blocked with no path forward).
 - Never repeat the same tool call more than twice.
 - If a tool fails, try a different approach before giving up.
@@ -189,9 +189,9 @@ export async function runFleetAgent(
     onProgress?.(task.id, 'dispatched', task.task);
     steps.push(`Dispatched: ${task.task}`);
 
-    // Pre-boot a dedicated Daytona sandbox for this agent
+    // Pre-boot a dedicated Orgo computer for this agent
     let sandboxContext = '';
-    if (process.env.DAYTONA_API_KEY) {
+    if (process.env.ORGO_API_KEY) {
       try {
         const booted = await prebootSandbox();
         if (booted) {
@@ -216,7 +216,7 @@ export async function runFleetAgent(
 
     const tools = [
       ...githubToolDefinitions,
-      ...daytonaToolDefinitions,
+      ...orgoToolDefinitions,
       callLibrarianProToolDefinition,
       callOracleToolDefinition,
       FLEET_TASK_COMPLETE_TOOL,
@@ -275,8 +275,8 @@ export async function runFleetAgent(
           } else if (isCallOracleTool(toolName)) {
             const request = typeof toolArgs.request === 'string' ? toolArgs.request : JSON.stringify(toolArgs);
             toolResult = await runOracleSubagent(request);
-          } else if (isDaytonaTool(toolName)) {
-            toolResult = await runDaytonaTool(toolName, toolArgs);
+          } else if (isOrgoTool(toolName)) {
+            toolResult = await runOrgoTool(toolName, toolArgs);
           } else {
             toolResult = await runGitHubTool(githubToken, toolName, toolArgs);
           }
@@ -333,7 +333,7 @@ export const callFleetToolDefinition = {
   type: 'function' as const,
   function: {
     name: 'dispatch_fleet',
-    description: 'Dispatch a fleet of parallel autonomous sub-agents to execute multiple independent coding tasks simultaneously. Each agent gets its own isolated cloud sandbox, runs the full agent loop (GitHub tools, Daytona, Librarian, Oracle), opens a PR, and reports back. Use when the user wants to apply work across multiple repos, run a batch of independent tasks in parallel, or when N≥2 coding tasks can proceed without blocking each other. Do NOT use for sequential tasks where step B depends on step A — use the normal loop for those.',
+    description: 'Dispatch a fleet of parallel autonomous sub-agents to execute multiple independent coding tasks simultaneously. Each agent gets its own isolated Orgo computer, runs the full agent loop (GitHub tools, Orgo, Librarian, Oracle), opens a PR, and reports back. Use when the user wants to apply work across multiple repos, run a batch of independent tasks in parallel, or when N≥2 coding tasks can proceed without blocking each other. Do NOT use for sequential tasks where step B depends on step A — use the normal loop for those.',
     parameters: {
       type: 'object' as const,
       required: ['tasks'],

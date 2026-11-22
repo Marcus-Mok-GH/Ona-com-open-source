@@ -2912,7 +2912,7 @@ export default function AppPage() {
                           <button
                             type="button"
                             disabled
-                            aria-label="Booting Daytona VM"
+                            aria-label="Booting Orgo computer"
                             className="flex size-10 shrink-0 cursor-not-allowed items-center justify-center rounded-full bg-gray-950 text-white opacity-80"
                           >
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="animate-spin">

@@ -7,21 +7,21 @@ const pollinationsBreaker = getCircuitBreaker('pollinations', {
   halfOpenMaxCalls: 2,
 });
 
-const daytonaBreaker = getCircuitBreaker('daytona', {
+const orgoBreaker = getCircuitBreaker('orgo', {
   failureThreshold: 3,
   resetTimeoutMs: 20000,
   halfOpenMaxCalls: 2,
 });
 
 export async function callWithResilience<T>(
-  serviceName: 'pollinations' | 'daytona',
+  serviceName: 'pollinations' | 'orgo',
   operation: () => Promise<T>,
   options?: {
     maxRetries?: number;
     initialDelayMs?: number;
   }
 ): Promise<T> {
-  const breaker = serviceName === 'pollinations' ? pollinationsBreaker : daytonaBreaker;
+  const breaker = serviceName === 'pollinations' ? pollinationsBreaker : orgoBreaker;
 
   try {
     return await breaker.execute(() =>
@@ -43,7 +43,7 @@ export async function callWithResilience<T>(
 export function getResilienceMetrics() {
   return {
     pollinations: pollinationsBreaker.getMetrics(),
-    daytona: daytonaBreaker.getMetrics(),
+    orgo: orgoBreaker.getMetrics(),
   };
 }
 

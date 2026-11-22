@@ -9,7 +9,7 @@ vi.mock('@/libs/DB', () => ({
   },
 }));
 
-vi.mock('@/libs/Daytona', () => ({
+vi.mock('@/libs/Orgo', () => ({
   listAllSandboxFiles: vi.fn(async () => ['src/index.ts']),
 }));
 
@@ -19,7 +19,7 @@ vi.mock('@/libs/NeonAuth', () => ({
 }));
 
 import { GET } from './route';
-import { listAllSandboxFiles } from '@/libs/Daytona';
+import { listAllSandboxFiles } from '@/libs/Orgo';
 import { db } from '@/libs/DB';
 
 function makeRequest(conversationId?: string) {

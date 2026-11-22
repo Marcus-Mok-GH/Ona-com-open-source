@@ -2,7 +2,7 @@
 
 ## What this is
 
-**ONA but OPEN SOURCE** — an open-source clone of the [Ona](https://ona.com) platform: a full-stack AI background software engineering agent. Users describe tasks in a chat UI, and an autonomous agent uses GitHub, Daytona sandboxes, a Librarian research subagent, an Oracle deep-reasoning subagent, and a Browser Use subagent to deliver changes end-to-end (task in → pull request out).
+**ONA but OPEN SOURCE** — an open-source clone of the [Ona](https://ona.com) platform: a full-stack AI background software engineering agent. Users describe tasks in a chat UI, and an autonomous agent uses GitHub, Orgo computers, a Librarian research subagent, an Oracle deep-reasoning subagent, and a Browser Use subagent to deliver changes end-to-end (task in → pull request out).
 
 Built with Next.js 15 (App Router) + React 19 + Tailwind CSS 4 + Drizzle ORM + PostgreSQL, deployed via Replit/Vercel.
 
@@ -26,7 +26,7 @@ Create `.env.local` for local dev. Key vars (see `src/libs/Env.ts`):
 - **DB (tried in order):** `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_DATABASE_URL`, `DATABASE_URL`
 - **Session:** `SESSION_SECRET` (32+ chars) — cookie name `replit_auth_session`
 - **AI:** `FIREWORKS_API_KEY` (+ optional model overrides: `FIREWORKS_MODEL`, `FIREWORKS_BROWSER_MODEL`, `FIREWORKS_LIBRARIAN_MODEL`, `FIREWORKS_FALLBACK_MODELS`)
-- **Sandboxes:** `DAYTONA_API_KEY`
+- **Sandboxes:** `ORGO_API_KEY`
 - **Research/Browser:** `FIRECRAWL_API_KEY` (+ optional `FIRECRAWL_API_URL`, `FIRECRAWL_BROWSER_TTL`)
 - **GitHub OAuth device flow:** `GITHUB_CLIENT_ID`
 - **Credits (optional):** `CREDITS_PER_1000_TOKENS`, `SIGNUP_CREDITS`
@@ -42,22 +42,22 @@ Create `.env.local` for local dev. Key vars (see `src/libs/Env.ts`):
 
 ### API routes (`src/app/api/`)
 
-- **`chat/route.ts`** — central agent endpoint. Runs the "Ultrawork" agentic loop with Fireworks AI, streaming SSE events. Handles tool calls for GitHub, Daytona, Librarian, Oracle, Browser Use. Largest & most critical file.
+- **`chat/route.ts`** — central agent endpoint. Runs the "Ultrawork" agentic loop with Fireworks AI, streaming SSE events. Handles tool calls for GitHub, Orgo, Librarian, Oracle, Browser Use. Largest & most critical file.
 - `conversations/` — CRUD for conversation history + Super Agent.
 - `credits/balance/` — credit balance endpoint.
 - `jobs/[jobId]/events/` — SSE event stream for background job progress (reconnect polling every 3s).
 - `github/device/` — GitHub OAuth device flow (start/poll/disconnect).
 - `login`, `callback`, `logout` — Replit OIDC (PKCE + nonce via `openid-client`).
 - `auth/user/` — current user.
-- `sandbox/files/` — list files in a Daytona sandbox.
+- `sandbox/files/` — list files in a Orgo computer.
 - `settings/api-keys/` — per-user hashed API keys (raw shown once; used as `Authorization: Bearer <key>`).
 - `super-agent/heartbeat/` — Super Agent heartbeat endpoint.
-- `healthz/` — health check (database, Fireworks AI, Daytona, Super Agent).
+- `healthz/` — health check (database, Fireworks AI, Orgo, Super Agent).
 - `readiness/` — readiness probe.
 
 ### Core libraries (`src/libs/`)
 
-- **Daytona.ts** — sandbox tools (`sandbox_create/exec/write_file/read_file/list_files/delete/git_clone`).
+- **Orgo.ts** — sandbox tools (`sandbox_create/exec/write_file/read_file/list_files/delete/git_clone`).
 - **GitHub.ts** — full GitHub API; `github_*` tools for repos/files/branches/commits/PRs/issues. **Blocks direct writes to default branch by default** — feature branches + PRs only.
 - **Librarian.ts** — research subagent (up to 15 iterations). Tools: `scrape_page` (Firecrawl), `fetch_url`, `search_web` (DuckDuckGo), `npm_package`, `github_readme`. Exposed as `call_librarian`.
 - **LibrarianPro.ts** — unified research + browser subagent replacing both Librarian and Browser Use. Exposed as `call_librarian_pro`.
@@ -71,7 +71,7 @@ Create `.env.local` for local dev. Key vars (see `src/libs/Env.ts`):
 - **Env.ts** — centralized env access (no validation lib; reads `process.env`).
 - **ApiKeys.ts** — hashing/verification for programmatic API keys.
 - **Arcjet.ts** — rate limiting & security.
-- **HealthCheck.ts** — health & readiness checks for database, Fireworks AI, Daytona, and Super Agent. Exposed via `/api/healthz` and `/api/readiness`.
+- **HealthCheck.ts** — health & readiness checks for database, Fireworks AI, Orgo, and Super Agent. Exposed via `/api/healthz` and `/api/readiness`.
 - **CircuitBreaker.ts** — circuit breaker pattern for external API calls.
 - **ResilientApi.ts** — retry-aware API client.
 - **GracefulShutdown.ts** — graceful process shutdown handling.
@@ -141,4 +141,4 @@ Mobile auth opens Replit sign-in in a separate tab and polls `/api/auth/user?opt
 - **SSE stream drops:** the client keeps the active job, resets job-generated UI messages, and replays persisted events from the beginning to avoid duplicate streamed text.
 - **Vercel build:** uses `npm install --legacy-peer-deps` + `npm run build`. No local DB started during build; no recursive `build:*` scripts.
 - **Locale files:** only edit `en.json`; `fr.json` is Crowdin-managed.
-- **Health monitoring:** `/api/healthz` checks database, Fireworks AI, Daytona, Super Agent. `/api/readiness` returns ready/unready status.
+- **Health monitoring:** `/api/healthz` checks database, Fireworks AI, Orgo, Super Agent. `/api/readiness` returns ready/unready status.

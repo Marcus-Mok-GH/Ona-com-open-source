@@ -4,7 +4,7 @@ This file provides critical context and instructions for AI agents working on th
 
 ## Project Overview
 
-**ONA** is an autonomous, background software engineering agent. It takes a task description and delivers end-to-end results (typically a Pull Request) by utilizing a suite of tools including GitHub, Daytona sandboxes, and specialized subagents.
+**ONA** is an autonomous, background software engineering agent. It takes a task description and delivers end-to-end results (typically a Pull Request) by utilizing a suite of tools including GitHub, Orgo computers, and specialized subagents.
 
 ### Tech Stack
 - **Framework:** Next.js 15 (App Router) + React 19
@@ -12,7 +12,7 @@ This file provides critical context and instructions for AI agents working on th
 - **Styling:** Tailwind CSS 4
 - **Database:** PostgreSQL with Drizzle ORM
 - **AI Provider:** Fireworks AI (Models: Kimi K2.5, Qwen3 Coder)
-- **Infrastructure:** Daytona (Sandboxes), Firecrawl (Research), Iron Session (Auth)
+- **Infrastructure:** Orgo (computers), Firecrawl (Research), Iron Session (Auth)
 - **I18n:** `next-intl` (Locales: `en`, `fr`)
 
 ## Core Agent Workflow: "Ultrawork Loop"
@@ -21,7 +21,7 @@ The ONA agent operates within a structured loop enforced by the system. For any 
 
 1.  **Plan:** Immediately call `todo_write` with a complete breakdown of steps.
 2.  **Execute & Update:** As steps are started and finished, call `todo_write` to update statuses (`pending` -> `in_progress` -> `done`).
-3.  **Verify:** Use Daytona sandboxes (`sandbox_exec`) to run tests/builds before finalizing.
+3.  **Verify:** Use Orgo computers (`sandbox_exec`) to run tests/builds before finalizing.
 4.  **Complete:** Call `task_complete` with a summary to exit the loop. Stopping without calling this tool will cause the system to re-inject the agent if todos are still pending.
 
 ## Development Conventions
@@ -66,7 +66,7 @@ ONA delegates complex tasks to specialized subagents:
 
 ## Key Directories
 - `src/app`: Routes and API handlers.
-- `src/libs`: Core services (GitHub, Daytona, Subagents).
+- `src/libs`: Core services (GitHub, Orgo, Subagents).
 - `src/components`: UI components.
 - `src/models`: Database schema (`Schema.ts`).
 - `migrations`: SQL migration files.

@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/libs/DB';
 import { conversationsSchema } from '@/models/Schema';
-import { deleteSandboxById } from '@/libs/Daytona';
+import { deleteSandboxById } from '@/libs/Orgo';
 import { authFailureResponse, getRequestAuth, isAuthFailure, requireApiKeyScope } from '@/libs/ApiKeys';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

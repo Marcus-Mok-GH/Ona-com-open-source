@@ -24,7 +24,7 @@ export type HealthCheckResult = {
     };
     externalApis: {
       pollinations: { status: HealthStatus; message?: string };
-      daytona: { status: HealthStatus; message?: string };
+      orgo: { status: HealthStatus; message?: string };
     };
   };
   uptime: number;
@@ -99,15 +99,16 @@ async function checkPollinations(): Promise<{ status: HealthStatus; message?: st
   }
 }
 
-async function checkDaytona(): Promise<{ status: HealthStatus; message?: string }> {
+async function checkOrgo(): Promise<{ status: HealthStatus; message?: string }> {
   try {
-    const daytonaApiKey = process.env.DAYTONA_API_KEY;
-    if (!daytonaApiKey) {
-      return { status: 'healthy', message: 'DAYTONA_API_KEY not configured - skipping check' };
+    const orgoApiKey = process.env.ORGO_API_KEY;
+    if (!orgoApiKey) {
+      return { status: 'healthy', message: 'ORGO_API_KEY not configured - skipping check' };
     }
 
-    const response = await fetch('https://api.daytona.io/health', {
-      method: 'HEAD',
+    const response = await fetch('https://www.orgo.ai/api/workspaces', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${orgoApiKey}` },
       signal: AbortSignal.timeout(3000),
     });
     if (response.ok) {
@@ -115,23 +116,23 @@ async function checkDaytona(): Promise<{ status: HealthStatus; message?: string 
     }
     return { status: 'degraded', message: `HTTP ${response.status}` };
   } catch {
-    return { status: 'degraded', message: 'Unable to reach Daytona API' };
+    return { status: 'degraded', message: 'Unable to reach Orgo API' };
   }
 }
 
 export async function performHealthCheck(): Promise<HealthCheckResult> {
-  const [dbCheck, superAgentCheck, pollinationsCheck, daytonaCheck] = await Promise.all([
+  const [dbCheck, superAgentCheck, pollinationsCheck, orgoCheck] = await Promise.all([
     checkDatabase(),
     checkSuperAgent(),
     checkPollinations(),
-    checkDaytona(),
+    checkOrgo(),
   ]);
 
   let overallStatus: HealthStatus = 'healthy';
   if (dbCheck.status === 'unhealthy') {
     overallStatus = 'unhealthy';
   } else if (dbCheck.status === 'degraded' || superAgentCheck.status === 'degraded' || 
-             pollinationsCheck.status === 'degraded' || daytonaCheck.status === 'degraded') {
+             pollinationsCheck.status === 'degraded' || orgoCheck.status === 'degraded') {
     overallStatus = 'degraded';
   }
 
@@ -143,7 +144,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
       superAgent: superAgentCheck,
       externalApis: {
         pollinations: pollinationsCheck,
-        daytona: daytonaCheck,
+        orgo: orgoCheck,
       },
     },
     uptime: Math.floor((Date.now() - START_TIME) / 1000),

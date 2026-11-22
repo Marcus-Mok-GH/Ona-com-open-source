@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ONA but OPEN SOURCE — a full-stack AI coding agent application. Users describe tasks, and an autonomous agent (ONA) uses GitHub API, Daytona sandboxes, a Librarian research subagent, and a Browser Use subagent to complete them end-to-end (task in → pull request out). Built with Next.js 15 App Router, React 19, Tailwind CSS 4, Drizzle ORM, and PostgreSQL.
+ONA but OPEN SOURCE — a full-stack AI coding agent application. Users describe tasks, and an autonomous agent (ONA) uses GitHub API, Orgo computers, a Librarian research subagent, and a Browser Use subagent to complete them end-to-end (task in → pull request out). Built with Next.js 15 App Router, React 19, Tailwind CSS 4, Drizzle ORM, and PostgreSQL.
 
 ## Commands
 
@@ -32,17 +32,17 @@ Linting and type-checking run automatically on commit via lefthook pre-commit ho
 
 ### Core API Routes
 
-- `api/chat/route.ts` — Central agent endpoint. Runs an agentic loop with Fireworks AI models, streaming SSE events back to the client. Handles tool calls for GitHub, Daytona, Librarian, Browser Use, and Ultrawork (todo/task tracking). This is the largest and most critical file in the project.
+- `api/chat/route.ts` — Central agent endpoint. Runs an agentic loop with Fireworks AI models, streaming SSE events back to the client. Handles tool calls for GitHub, Orgo, Librarian, Browser Use, and Ultrawork (todo/task tracking). This is the largest and most critical file in the project.
 - `api/conversations/` — CRUD for conversation history, persisted in PostgreSQL
 - `api/jobs/[jobId]/events/` — SSE event stream for background job progress
 - `api/github/device/` — GitHub OAuth device flow (start, poll, disconnect)
 - `api/login`, `api/callback`, `api/logout` — Replit OIDC auth flow
 - `api/auth/user/` — Current user info
-- `api/sandbox/files/` — List files in a Daytona sandbox
+- `api/sandbox/files/` — List files in a Orgo computer
 
 ### Key Libraries (`src/libs/`)
 
-- **Daytona.ts** — Daytona sandbox SDK wrapper. Defines `sandbox_*` tools (create, exec, write_file, read_file, list_files, delete, git_clone). Each tool has a definition (for the AI's tool schema) and a runner function.
+- **Orgo.ts** — Orgo computer SDK wrapper. Defines `sandbox_*` tools (create, exec, write_file, read_file, list_files, delete, git_clone). Each tool has a definition (for the AI's tool schema) and a runner function.
 - **GitHub.ts** — Full GitHub API wrapper. Defines `github_*` tools for repos, files, branches, commits, PRs, issues, and cloning. Reads token from iron-session cookie, falling back to `user_github_tokens` DB table. Enforces no-push-to-default-branch by default.
 - **Librarian.ts** — Research subagent. Runs its own agentic loop (up to 15 iterations) against Fireworks AI with tools: `scrape_page` (Firecrawl), `fetch_url`, `search_web` (DuckDuckGo), `npm_package`, `github_readme`. Exposed to the main AI as a single `call_librarian` tool.
 - **BrowserUse.ts** — Browser automation subagent. Opens a Firecrawl CDP session, connects Playwright, runs up to 25 iterations with tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_select`, `browser_screenshot`, `search_web`. Uses accessibility tree representation (no vision model needed). Exposed as `call_browser_use`.
@@ -93,4 +93,4 @@ Strict mode with `noUncheckedIndexedAccess`, `noImplicitReturns`, `noUnusedLocal
 
 ### Environment Variables
 
-Key env vars: `DATABASE_URL`/`POSTGRES_URL`, `SESSION_SECRET`, `FIREWORKS_API_KEY`, `DAYTONA_API_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_CLIENT_ID`. See `src/libs/Env.ts` for the full list. Sensitive values go in `.env.local` (gitignored).
+Key env vars: `DATABASE_URL`/`POSTGRES_URL`, `SESSION_SECRET`, `FIREWORKS_API_KEY`, `ORGO_API_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_CLIENT_ID`. See `src/libs/Env.ts` for the full list. Sensitive values go in `.env.local` (gitignored).

@@ -59,7 +59,7 @@ An open-source platform for AI background software engineering agents. The landi
 ## Chat Interface (/app)
 - Real streaming AI responses via `src/app/api/chat/route.ts`
 - Image upload (file picker button) and paste-from-clipboard support
-- First-message sends stay on the prompt screen with a disabled spinner while Daytona pre-boots; persisted `sandbox_booting`/`sandbox_ready` events clear the gate and reveal the chat UI once the VM is ready.
+- First-message sends stay on the prompt screen with a disabled spinner while Orgo pre-boots; persisted `sandbox_booting`/`sandbox_ready` events clear the gate and reveal the chat UI once the VM is ready.
 - Credits are cent-denominated: 1 credit equals 1 cent. Each successful AI provider call deducts credits from `user_credits` using `CREDITS_PER_1000_TOKENS` if set, otherwise 1 credit per 1,000 estimated tokens with a 1-credit minimum.
 - System prompt positions ONA but OPEN SOURCE as a send-and-walk-away background software engineering agent with task-risk-based accuracy escalation, stronger autonomous continuation rules, Oracle second-opinion reasoning for high-risk work, and lower-temperature model calls for implementation accuracy.
 - GitHub tools support branch creation, file writes on feature branches, and pull request creation; `src/libs/GitHub.ts` prevents accidental direct writes to the default branch.
@@ -132,7 +132,7 @@ npm run db:studio    # Open Drizzle Studio
      "next-intl", "@t3-oss/env-nextjs", "zod", "drizzle-orm",
     "pg", "pino", "pino-pretty", "posthog-js", "react-markdown", "rehype-highlight",
      "remark-gfm", "highlight.js", "react-hook-form",
-     "@hookform/resolvers", "@electric-sql/pglite", "@daytonaio/sdk"
+     "@hookform/resolvers", "@electric-sql/pglite", "Orgo REST API"
    ]});
    ```
 
