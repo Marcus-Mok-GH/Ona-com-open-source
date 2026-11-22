@@ -245,7 +245,7 @@ export default async function Index(props: IIndexProps) {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                href="/dashboard"
+                href="/sign-up"
                 className="inline-flex items-center gap-2 rounded-lg bg-[var(--text-primary)] px-5 py-2.5 text-sm font-medium text-[var(--bg)] transition-opacity hover:opacity-80"
               >
                 Get Started for Free
@@ -682,7 +682,7 @@ export default async function Index(props: IIndexProps) {
           <p className="mx-auto mt-8 max-w-sm text-lg text-[var(--text-secondary)]">No commitment. No setup. Just start.</p>
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/dashboard"
+              href="/sign-up"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--text-primary)] px-5 py-2.5 text-sm font-medium text-[var(--bg)] transition-opacity hover:opacity-80"
             >
               Get Started for Free
