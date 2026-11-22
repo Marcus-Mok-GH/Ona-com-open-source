@@ -123,17 +123,7 @@ export default async function Dashboard(props: Props) {
       ),
       primary: true,
     },
-    {
-      title: 'Super Agent',
-      description: 'Configure autonomous heartbeat agents for background work.',
-      href: '/app/super-agent',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M13 2 L3 14 H12 L11 22 L21 10 H12 L13 2 Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-      primary: false,
-    },
+
     {
       title: 'API Documentation',
       description: 'Explore and test ONA REST APIs directly in your browser.',

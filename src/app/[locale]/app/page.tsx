@@ -8,7 +8,7 @@ import { GitHubConnect } from '@/components/GitHubConnect';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CreditsChip } from '@/components/CreditsChip';
 import { UserDropdown } from '@/components/UserDropdown';
-import { DEFAULT_SUPER_AGENT_HEARTBEAT_MINUTES, DEFAULT_SUPER_AGENT_MODEL, DEFAULT_SUPER_AGENT_PROMPT } from '@/libs/SuperAgent';
+
 import { copyTextToClipboard, createBrowserId, observeElementSize } from '@/utils/browserCompat';
 
 const AssistantMarkdownLazy = dynamic(() => import('@/components/AssistantMarkdown'), {
@@ -73,15 +73,6 @@ type Message = {
   imagePreview?: string;
 };
 
-type SuperAgentConfig = {
-  enabled: boolean;
-  heartbeatMinutes: number;
-  wakePrompt: string;
-  model: string;
-  nextHeartbeatAt: string | null;
-  lastHeartbeatAt: string | null;
-  lastRunStatus: string;
-};
 
 type Conversation = {
   id: string;
@@ -90,7 +81,6 @@ type Conversation = {
   createdAt: number;
   activeJobId?: string | null;
   sandboxId?: string | null;
-  superAgent?: SuperAgentConfig | null;
 };
 
 
@@ -710,15 +700,6 @@ function newConversation(): Conversation {
     messages: [],
     createdAt: Date.now(),
     sandboxId: null,
-    superAgent: {
-      enabled: false,
-      heartbeatMinutes: DEFAULT_SUPER_AGENT_HEARTBEAT_MINUTES,
-      wakePrompt: DEFAULT_SUPER_AGENT_PROMPT,
-      model: DEFAULT_SUPER_AGENT_MODEL,
-      nextHeartbeatAt: null,
-      lastHeartbeatAt: null,
-      lastRunStatus: 'idle',
-    },
   };
 }
 
@@ -875,20 +856,6 @@ export default function AppPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // Cmd/Ctrl+Shift+S → navigate to super agent page
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.key !== 'S') return;
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') return;
-      e.preventDefault();
-      if (!activeId || !syncedIds.current.has(activeId)) return;
-      router.push(`/app/super-agent?conversationId=${activeId}`);
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeId, router]);
-
   // Load conversation history from DB on mount
   useEffect(() => {
     async function loadHistory() {
@@ -904,7 +871,6 @@ export default function AppPage() {
           createdAt: string;
           activeJobId: string | null;
           sandboxId: string | null;
-          superAgent?: SuperAgentConfig | null;
           messages: Array<{ id: string; role: string; content: unknown }>;
         }>;
 
@@ -915,7 +881,6 @@ export default function AppPage() {
             createdAt: new Date(c.createdAt).getTime(),
             activeJobId: c.activeJobId,
             sandboxId: c.sandboxId,
-            superAgent: c.superAgent ?? null,
             messages: uniqueMessages(c.messages.map(m => ({
               id: m.id,
               role: m.role as Message['role'],
@@ -1301,7 +1266,6 @@ export default function AppPage() {
         createdAt: string;
         activeJobId: string | null;
         sandboxId?: string | null;
-        superAgent?: SuperAgentConfig | null;
         messages: Array<{ id: string; role: string; content: unknown }>;
       }>;
       const found = data.find(c => c.id === convId);
@@ -1312,7 +1276,6 @@ export default function AppPage() {
               ...c,
               activeJobId: null,
               sandboxId: found.sandboxId ?? c.sandboxId,
-              superAgent: found.superAgent ?? c.superAgent,
               messages: uniqueMessages(found.messages.map(m => ({
                 id: m.id,
                 role: m.role as Message['role'],
@@ -1403,7 +1366,6 @@ export default function AppPage() {
   const activeConversation = conversations.find(c => c.id === activeId);
   const messages = activeConversation?.messages ?? [];
   const activeSandboxId = activeConversation?.sandboxId;
-  const canConfigureSuperAgent = !!activeId && syncedIds.current.has(activeId);
 
   useEffect(() => { setTodos([]); }, [activeId]);
 
@@ -2658,34 +2620,6 @@ export default function AppPage() {
             />
             <span>{selectedModel === 'ona-hands-off' ? 'Hands off' : selectedModel === 'ona-plan' ? 'Plan mode' : 'Hands on'}</span>
           </div>
-          {canConfigureSuperAgent
-            ? (
-                <Link
-                  href={`/app/super-agent?conversationId=${activeConversation?.id}`}
-                  className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors sm:flex sm:px-3 ${
-                    activeConversation?.superAgent?.enabled
-                      ? 'border-emerald-200 text-emerald-700 hover:border-emerald-400 dark:border-emerald-900 dark:text-emerald-300 dark:hover:border-emerald-700'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-100'
-                  }`}
-                  style={{ backgroundColor: 'var(--bg-card)' }}
-                  title="Configure super agent (⌘⇧S)"
-                >
-                  <span className={`size-1.5 shrink-0 rounded-full ${activeConversation?.superAgent?.enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                  <span>Super agent</span>
-                </Link>
-              )
-            : (
-                <button
-                  type="button"
-                  disabled
-                  className="hidden cursor-not-allowed items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-400 opacity-50 sm:flex sm:px-3"
-                  style={{ backgroundColor: 'var(--bg-card)' }}
-                  title="Send the first task to save this conversation before enabling the super agent"
-                >
-                  <span className="size-1.5 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600" />
-                  <span>Super agent</span>
-                </button>
-              )}
           {activeSandboxId
             ? (
                 <Link
@@ -2865,20 +2799,6 @@ export default function AppPage() {
                                 </div>
                               )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => { setSuperAgentOpen(true); setSuperAgentError(null); setSuperAgentWakeSuccess(false); }}
-                              disabled={!canConfigureSuperAgent}
-                              title={canConfigureSuperAgent ? 'Configure super agent (⌘⇧S)' : 'Send the first task to save this conversation before enabling the super agent'}
-                              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                                activeConversation?.superAgent?.enabled
-                                  ? 'border-emerald-200 text-emerald-700 hover:border-emerald-400 dark:border-emerald-900 dark:text-emerald-300 dark:hover:border-emerald-700'
-                                  : 'border-black/8 bg-white/80 text-gray-500 hover:border-black/20 hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200'
-                              }`}
-                            >
-                              <span className={`size-1.5 shrink-0 rounded-full ${activeConversation?.superAgent?.enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                              Super agent
-                            </button>
                           </div>
                         );
                       })()}
@@ -3127,20 +3047,6 @@ export default function AppPage() {
                         </div>
                       )}
                     </div>
-                      <button
-                        type="button"
-                        onClick={() => { setSuperAgentOpen(true); setSuperAgentError(null); setSuperAgentWakeSuccess(false); }}
-                        disabled={!canConfigureSuperAgent}
-                        title={canConfigureSuperAgent ? 'Configure super agent' : 'Send the first task to save this conversation before enabling the super agent'}
-                        className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                          activeConversation?.superAgent?.enabled
-                            ? 'border-emerald-200 text-emerald-700 hover:border-emerald-400 dark:border-emerald-900 dark:text-emerald-300 dark:hover:border-emerald-700'
-                            : 'border-black/8 bg-white/80 text-gray-500 hover:border-black/20 hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200'
-                        }`}
-                      >
-                        <span className={`size-1.5 shrink-0 rounded-full ${activeConversation?.superAgent?.enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                        Super agent
-                      </button>
                     </div>
                   );
                 })()}
