@@ -95,7 +95,7 @@ export default async function Dashboard(props: Props) {
         </svg>
       ),
       warn: false,
-      href: '/app',
+      href: '/task',
     },
     {
       label: 'API keys',
@@ -114,7 +114,7 @@ export default async function Dashboard(props: Props) {
     {
       title: 'Start a new task',
       description: 'Open the agent and describe what you need built.',
-      href: '/app',
+      href: '/task',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
@@ -127,7 +127,7 @@ export default async function Dashboard(props: Props) {
     {
       title: 'API Documentation',
       description: 'Explore and test ONA REST APIs directly in your browser.',
-      href: '/app/api-docs',
+      href: '/api-docs',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -255,7 +255,7 @@ export default async function Dashboard(props: Props) {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Recent conversations</h2>
-          <Link href="/app" className="text-xs font-medium text-neutral-600 transition-colors hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100">
+          <Link href="/task" className="text-xs font-medium text-neutral-600 transition-colors hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-neutral-100">
             View all →
           </Link>
         </div>
@@ -270,7 +270,7 @@ export default async function Dashboard(props: Props) {
                 </svg>
                 <p className="text-sm text-gray-400 dark:text-gray-500">No conversations yet</p>
                 <Link
-                  href="/app"
+                  href="/task"
                   className="rounded-md bg-neutral-950 px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-80 dark:bg-neutral-100 dark:text-neutral-950"
                 >
                   Start your first task
@@ -282,7 +282,7 @@ export default async function Dashboard(props: Props) {
                 {recentConversations.map(conv => (
                   <Link
                     key={conv.id}
-                    href={`/app?conversationId=${conv.id}`}
+                    href={`/task?c=${conv.id}`}
                     className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.03]"
                   >
                     <div className="flex min-w-0 items-center gap-3">
