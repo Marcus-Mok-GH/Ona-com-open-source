@@ -2594,7 +2594,7 @@ export default function AppPage() {
           <span className="sm:hidden">ONA</span>
         </Link>
         <nav className="hidden shrink-0 items-center gap-6 text-[11px] text-gray-500 dark:text-gray-400 md:flex">
-          <Link href="/app" className="transition-colors hover:text-gray-950 dark:hover:text-gray-100">Tasks</Link>
+          <Link href="/task" className="transition-colors hover:text-gray-950 dark:hover:text-gray-100">Tasks</Link>
           <button type="button" onClick={() => setSidebarOpen(true)} className="transition-colors hover:text-gray-950 dark:hover:text-gray-100">History</button>
           <Link href="/" className="transition-colors hover:text-gray-950 dark:hover:text-gray-100">Home</Link>
         </nav>
