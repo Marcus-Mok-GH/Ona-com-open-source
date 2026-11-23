@@ -70,7 +70,7 @@ export default function SandboxModifyPage() {
       >
         <div className="flex items-center gap-3">
           <Link
-            href="/app"
+            href="/task"
             className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-900 dark:hover:text-gray-100"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
