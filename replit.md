@@ -1,7 +1,7 @@
 # ONA but OPEN SOURCE — AI Background Software Engineering Platform
 
 ## Project Overview
-An open-source platform for AI background software engineering agents. The landing page uses a minimalist AI-agent platform aesthetic, and `/app` is a real AI chat interface powered by Fireworks AI where users can issue tasks to background agents that produce pull requests. The app is branded as “ONA but OPEN SOURCE”.
+An open-source platform for AI background software engineering agents. The landing page uses a minimalist AI-agent platform aesthetic, and `/task` is a real AI chat interface powered by Fireworks AI where users can issue tasks to background agents that produce pull requests. The app is branded as “ONA but OPEN SOURCE”.
 
 ## Architecture
 - **Framework**: Next.js 15 with App Router and Turbopack
@@ -9,7 +9,7 @@ An open-source platform for AI background software engineering agents. The landi
 - **Database**: PostgreSQL using Drizzle ORM; Vercel-style env vars are preferred in this order: `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_DATABASE_URL`, then `DATABASE_URL`
 - **ORM**: Drizzle ORM
 - **Styling**: Tailwind CSS v4
-- **i18n**: next-intl with `[locale]` routing, locales en/fr, `as-needed` prefix (so `/app` works without prefix)
+- **i18n**: next-intl with `[locale]` routing, locales en/fr, `as-needed` prefix (so `/task` works without prefix)
 - **AI**: Fireworks AI — ONA Max uses GLM 5.1 (`accounts/fireworks/models/glm-5p1`) and is the default for best task accuracy; ONA Max Fast uses Kimi K2.5 Turbo (`accounts/fireworks/routers/kimi-k2p5-turbo`); ONA Mini uses DeepSeek V3.2 (`accounts/fireworks/models/deepseek-v3p2`); the Oracle deep-reasoning subagent uses GLM 5.1 (`accounts/fireworks/models/glm-5p1`); the Librarian research subagent uses Kimi K2 Thinking (`accounts/fireworks/models/kimi-k2-thinking`); the Browser Use Expert subagent uses Kimi K2 Instruct 0905 (`accounts/fireworks/models/kimi-k2-instruct-0905`) — all overridable via env vars
 - **GitHub delivery policy**: repository changes default to branch + pull request; direct writes to the repository default branch are blocked unless the user explicitly asks for a direct push.
 - **Package manager**: npm (with `legacy-peer-deps=true` in `.npmrc`)
@@ -35,11 +35,11 @@ An open-source platform for AI background software engineering agents. The landi
 
 ## Key Files
 - `src/app/[locale]/(marketing)/page.tsx` — Full ona.com landing page (hero, features, testimonials, footer)
-- `src/app/[locale]/app/page.tsx` — Chat UI at /app with real AI streaming + image upload
+- `src/app/[locale]/task/page.tsx` — Chat UI at /task with real AI streaming + image upload
 - `src/app/[locale]/sandbox-modify/[sandboxId]/page.tsx` — Sandbox env var editor at /sandbox-modify/[id], stores vars in localStorage
 - `src/app/api/chat/route.ts` — Server-side streaming API route calling Fireworks AI
 - `src/app/[locale]/(auth)/dashboard/user-profile/[[...user-profile]]/SettingsActions.tsx` — Settings actions including API key creation, usage stats, rate-limit display, and copy-paste API examples
-- `src/app/[locale]/app/layout.tsx` — Minimal layout for /app
+- `src/app/[locale]/task/layout.tsx` — Minimal layout for /task
 - `src/app/[locale]/(marketing)/layout.tsx` — Marketing nav with NavPromptBox + Get Started
 - `src/app/[locale]/layout.tsx` — Root locale layout and client-side theme initializer
 - `src/components/ThemeInitializer.tsx` — Applies saved/system dark-mode preference after hydration
@@ -50,13 +50,13 @@ An open-source platform for AI background software engineering agents. The landi
 ## Design Constants
 - Landing page direction: ampcode.com-inspired editorial layout with pale grid background, oversized serif typography, thin divider lines, compact black CTAs, and terminal-style dark visual panels while preserving existing ONA copy
 - Ona.com feature parity additions: marketing now highlights trigger-based automations, native context integrations, isolated per-task environments, reporting/audit trails, governance controls, cost caps, human takeover, model routing, reusable skills, backlog triage, docs drift, and dead-code cleanup.
-- Responsive optimization: landing sections use smaller mobile grids/spacing/type scales and full-width mobile CTAs; the `/app` header, banner, prompt composer, and suggestion chips are tuned to avoid crowding on mobile while preserving the denser desktop layout.
-- `/app` direction: Manus.im-inspired task prompt UI with a near-white canvas, compact navigation, centered serif hero headline, large rounded prompt composer, small announcement strip, pill suggestion actions, and a restrained gray/black palette while preserving ONA identity and existing capabilities
+- Responsive optimization: landing sections use smaller mobile grids/spacing/type scales and full-width mobile CTAs; the `/task` header, banner, prompt composer, and suggestion chips are tuned to avoid crowding on mobile while preserving the denser desktop layout.
+- `/task` direction: Manus.im-inspired task prompt UI with a near-white canvas, compact navigation, centered serif hero headline, large rounded prompt composer, small announcement strip, pill suggestion actions, and a restrained gray/black palette while preserving ONA identity and existing capabilities
 - App background: `#fbfbfa` light, `#101010` dark
 - Serif font: `Georgia, "Times New Roman", serif`
 - Agent/avatar mark: solid foreground via `--bg-logo`
 
-## Chat Interface (/app)
+## Chat Interface (/task)
 - Real streaming AI responses via `src/app/api/chat/route.ts`
 - Image upload (file picker button) and paste-from-clipboard support
 - First-message sends stay on the prompt screen with a disabled spinner while Orgo pre-boots; persisted `sandbox_booting`/`sandbox_ready` events clear the gate and reveal the chat UI once the VM is ready.
@@ -64,11 +64,11 @@ An open-source platform for AI background software engineering agents. The landi
 - System prompt positions ONA but OPEN SOURCE as a send-and-walk-away background software engineering agent with task-risk-based accuracy escalation, stronger autonomous continuation rules, Oracle second-opinion reasoning for high-risk work, and lower-temperature model calls for implementation accuracy.
 - GitHub tools support branch creation, file writes on feature branches, and pull request creation; `src/libs/GitHub.ts` prevents accidental direct writes to the default branch.
 - Suggestion chips: Inspect repos, Clone a repo, Review PRs, Find CVEs
-- `/app` task history remains available via the top History control and the collapsible Past tasks tray; both support search/switching, and persisted conversations can be renamed/deleted
+- `/task` task history remains available via the top History control and the collapsible Past tasks tray; both support search/switching, and persisted conversations can be renamed/deleted
 - Librarian research tasks are handled by `src/libs/Librarian.ts` as an autonomous source-grounded research analyst with a longer research loop and detailed implementation-ready reports
 - Oracle deep-reasoning tasks are handled by `src/libs/Oracle.ts` using GLM 5.1, iterative self-audit/refinement, and a `call_oracle` tool for complex reasoning, architecture, strategy, debugging, and synthesis requests.
 - Browser automation tasks are handled by `src/libs/BrowserUse.ts` — the Browser Use Expert subagent uses Firecrawl's cloud-hosted browser (full JS rendering) to navigate, click, fill forms, scroll, screenshot, and extract data from live websites. Invoked via `call_browser_use` tool — internal tools (`browse`, `screenshot`, `search_web`) are never exposed to the main AI. Model overridable via `FIREWORKS_BROWSER_MODEL` env var.
-- File-edit tool steps now attach touched-file metadata with unified diffs for `sandbox_write_file`, `github_upsert_file`, and `github_delete_file`. The `/app` tool-step block renders a collapsible diff panel so users can inspect files changed by the AI.
+- File-edit tool steps now attach touched-file metadata with unified diffs for `sandbox_write_file`, `github_upsert_file`, and `github_delete_file`. The `/task` tool-step block renders a collapsible diff panel so users can inspect files changed by the AI.
 
 ## Background Agent System
 - **Persistent tool steps**: Tool call batches (e.g., "Reading file", "Creating branch") are saved as `tool_steps` messages in the DB and rendered permanently in the conversation — they never disappear
