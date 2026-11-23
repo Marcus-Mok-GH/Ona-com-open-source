@@ -175,7 +175,7 @@ export function UserDropdown() {
               Settings
             </Link>
             <Link
-              href="/app/api-docs"
+              href="/api-docs"
               role="menuitem"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]"
