@@ -1,11 +1,11 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
 
 import { routing } from './libs/I18nRouting';
 import { isShuttingDown, incrementActiveRequests, getShutdownStatus } from './libs/GracefulShutdown';
 
 const handleI18nRouting = createIntlMiddleware(routing);
+export const RETURN_TO_HEADER = 'x-return-to';
 const isHealthEndpoint = (pathname: string) => pathname === '/api/healthz' || pathname === '/api/readiness';
 
 /**
@@ -49,7 +49,12 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  return handleI18nRouting(req);
+  // Layouts cannot read the query string, so expose the full requested URL
+  // (path + query) to them. Used to keep e.g. /task?c=<id> through sign-in.
+  const headers = new Headers(req.headers);
+  headers.set(RETURN_TO_HEADER, `${pathname}${req.nextUrl.search}`);
+
+  return handleI18nRouting(new NextRequest(req, { headers }));
 }
 
 export const config = {
