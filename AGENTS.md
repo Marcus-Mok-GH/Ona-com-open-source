@@ -26,3 +26,4 @@ Create a separate commit for every discrete change instead of batching unrelated
 
 ## Security & Configuration Tips
 Keep secrets in `.env.local` and never commit credentials. Review changes touching `src/libs/auth.ts`, `src/libs/session.ts`, or `src/app/api/**` carefully, since they affect authentication, sessions, and external integrations.
+GitHub linking: `src/libs/Composio.ts` wraps the Composio API (`COMPOSIO_API_KEY` in the environment; optionally `COMPOSIO_GITHUB_AUTH_CONFIG_ID` / `COMPOSIO_BASE_URL`). Signed-in users must have a linked GitHub account (legacy device-flow token or active Composio connection, checked via `hasLinkedGithub`) to create chats — enforced server-side in `POST /api/conversations` and client-side by the `GithubLinkGate` modal on the task page.

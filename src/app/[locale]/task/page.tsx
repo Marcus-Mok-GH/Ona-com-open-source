@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GitHubConnect } from '@/components/GitHubConnect';
+import { GithubLinkGate } from '@/components/GithubLinkGate';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CreditsChip } from '@/components/CreditsChip';
 import { UserDropdown } from '@/components/UserDropdown';
@@ -768,6 +769,7 @@ export default function AppPage() {
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [linkGateOpen, setLinkGateOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('ona-max');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
@@ -906,6 +908,26 @@ export default function AppPage() {
     }
     loadHistory();
   }, []);
+  // Returning from the Composio GitHub connection flow: finish the pending new chat.
+  useEffect(() => {
+    if (loadingHistory) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('composio_connected')) {
+      return;
+    }
+    params.delete('composio_connected');
+    const next = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${next ? `?${next}` : ''}`);
+    try {
+      if (sessionStorage.getItem('ona:pending-new-chat') === '1') {
+        sessionStorage.removeItem('ona:pending-new-chat');
+        void createNewChat();
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingHistory]);
 
   useEffect(() => {
     setAtMention(null);
@@ -1438,7 +1460,7 @@ export default function AppPage() {
     if (isMobile) setSidebarOpen(false);
   }
 
-  function createNewChat() {
+  function openNewChat() {
     const c = newConversation();
     setConversations(prev => [c, ...prev]);
     setActiveId(c.id);
@@ -1446,6 +1468,45 @@ export default function AppPage() {
     setPendingImage(null);
     setSidebarOpen(false);
   }
+
+  // A new chat requires a GitHub account linked via Composio. Fail open on
+  // transient network errors — the server re-enforces the gate on first send.
+  async function isGithubLinkedForChat() {
+    try {
+      const res = await fetch('/api/composio/github/status');
+      if (!res.ok) {
+        return true;
+      }
+      const data = await res.json() as { linked: boolean };
+      return data.linked;
+    } catch {
+      return true;
+    }
+  }
+
+  async function createNewChat() {
+    if (await isGithubLinkedForChat()) {
+      openNewChat();
+      return;
+    }
+    try {
+      sessionStorage.setItem('ona:pending-new-chat', '1');
+    }
+    catch {}
+    setSidebarOpen(false);
+    setLinkGateOpen(true);
+  }
+
+  const handleGateLinked = useCallback(() => {
+    setLinkGateOpen(false);
+    try {
+      const wasPending = sessionStorage.getItem('ona:pending-new-chat') === '1';
+      sessionStorage.removeItem('ona:pending-new-chat');
+      if (wasPending) {
+        openNewChat();
+      }
+    } catch {}
+  }, []);
 
   function useSuggestion(prompt: string) {
     setInput(prompt);
@@ -1573,11 +1634,16 @@ export default function AppPage() {
     const sessionId = sessionIdRef.current;
     if (!syncedIds.current.has(convId)) {
       try {
-        await fetch('/api/conversations', {
+        const convRes = await fetch('/api/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: convId, title: convTitle, sessionId }),
         });
+        if (convRes.status === 403) {
+          // Server enforces the Composio GitHub gate for signed-in users.
+          setLinkGateOpen(true);
+          return;
+        }
         syncedIds.current.add(convId);
       } catch {}
     } else if (isFirstMessage) {
@@ -2600,6 +2666,11 @@ export default function AppPage() {
         </nav>
         <div className="flex min-w-0 shrink-0 basis-0 grow items-center justify-end gap-0.5 sm:gap-2">
           <GitHubConnect />
+          <GithubLinkGate
+            open={linkGateOpen}
+            onClose={() => setLinkGateOpen(false)}
+            onLinked={handleGateLinked}
+          />
           <div
             title={`Autonomy: ${AUTONOMY_OPTIONS.find(o => o.key === selectedModel)?.label ?? 'Hands on experience'} · Switch: ⌘1 Hands on · ⌘2 Hands off · ⌘3 Plan mode`}
             className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium sm:flex ${
