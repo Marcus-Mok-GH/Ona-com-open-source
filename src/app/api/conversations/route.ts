@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { and, desc, eq, isNull, or } from 'drizzle-orm';
-import { db } from '@/libs/DB';
 import { authFailureResponse, getRequestAuth, isAuthFailure, requireApiKeyScope } from '@/libs/ApiKeys';
+import { hasLinkedGithub } from '@/libs/Composio';
+import { db } from '@/libs/DB';
 import { agentJobsSchema, conversationsSchema, messagesSchema } from '@/models/Schema';
 
 export async function GET(req: NextRequest) {
@@ -69,6 +70,19 @@ export async function POST(req: NextRequest) {
   const scopeFailure = requireApiKeyScope(auth, 'task_running');
   if (scopeFailure) {
     return authFailureResponse(scopeFailure);
+  }
+
+  // Gate: signed-in users must have a GitHub account linked (legacy device
+  // flow token or active Composio connection) before they can create chats.
+  // API-key callers keep working so automations are not broken by the gate.
+  if (auth?.source === 'session') {
+    const linked = await hasLinkedGithub(auth.userId);
+    if (!linked) {
+      return Response.json(
+        { error: 'GITHUB_LINK_REQUIRED', message: 'Link your GitHub account (via Composio) to start a chat.' },
+        { status: 403 },
+      );
+    }
   }
 
   const { id, title, sessionId } = await req.json() as { id: string; title: string; sessionId?: string };
